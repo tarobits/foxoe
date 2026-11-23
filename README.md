@@ -13,10 +13,10 @@ need validation. Install this prerelease with `bash install.sh --channel beta`.
 - Configurable clock, text, value, and list widgets above the application dock.
 - Dragging, resizing, keyboard positioning, and explicit grid coordinates.
 - Live system load, Linux memory/temperature readings, and bounded JSON API polling.
-- Chromium integration for one selected kiosk tab, same-tab navigation, and Home.
+- Chromium integration for one selected kiosk tab, same-tab navigation, and Home behind a collapsible edge tab.
 - App-defined Stream Deck layouts, named screens, temporary keypad layouts, and
   individual button updates.
-- The full Heroicons outline library, text-only keys, per-key text sizes, and application-uploaded launcher and button artwork. Home keeps its house icon.
+- The full Heroicons outline library, text-only keys, per-key text sizes, and application-uploaded launcher and button artwork. Labels wrap and shrink without truncation; previews show the actual Stream Deck rendering. Home keeps its house icon.
 - Automatic app registration with a setup credential, per-app update credentials,
   and PNG/JPEG/WebP button images.
 - English and German interfaces, saved configuration, revision conflict detection,
@@ -135,9 +135,19 @@ To configure from another computer, enable the password-protected
 [HTTPS administration page](docs/DEPLOYMENT.md#network-administration).
 
 Use **Edit dashboard** to add, move, resize, and configure widgets. Changes become
-persistent only when saved; Cancel discards the draft. The grid has 12 columns,
-24 rows, and rejects overlaps. On narrow screens widgets stack; position and size
+persistent only when saved; Cancel discards the draft. The grid has 24 columns,
+48 rows at 48px each, and rejects overlaps. Existing layouts migrate to the finer
+grid automatically. On narrow screens widgets stack; position and size
 remain editable through fields.
+
+Choose **Custom layout** to combine text, values, lists, clocks, and icons in one
+widget. Adjust row/column proportions and each item's position and spans.
+**Appearance** controls text, icon, and background colors, text size, alignment,
+padding, and item spacing. **Rules** compare live data fields with typed values to
+change colors or visibility, for the whole widget or individual items. Matching
+rules apply in order; the last matching change to a property wins. Failed or
+unavailable sources do not trigger rules. Hidden widgets keep their grid space
+and remain visible while editing.
 
 Add JSON endpoints under Settings → Data sources. Widget paths support ordinary
 properties and numeric array indices, such as `queue.items` or `jobs[0].name`.
@@ -145,6 +155,11 @@ They do not execute JavaScript or JSONPath expressions. For list widgets, the
 item path selects a scalar field from each item. Up to 100 entries are displayed,
 with an indicator for additional entries. JSON responses are capped at 256 KiB;
 arrays are capped at 200 retained entries.
+
+**Preview JSON** fetches an immediate snapshot using the current source form,
+including unsaved changes. It shows formatted JSON and its fetch time; use
+**Refresh JSON** for another snapshot. This does not save the source or change
+widget data. The same credential redaction and response limits apply.
 
 The built-in `system` source measures the machine running FoxOE. `load1` is the
 one-minute load average, not CPU utilization percentage. Linux-only measurements

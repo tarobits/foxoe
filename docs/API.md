@@ -61,7 +61,9 @@ await deck.updateButton('quantity', { textSize: 24, icon: null, image: null });
 
 The same fields on the registration manifest configure its app launcher key.
 Text size affects the physical keys and their preview, not touchscreen app labels.
-Text wraps within the key and is truncated with an ellipsis when necessary.
+Text wraps within the key and shrinks below `textSize` as needed. The full label
+is retained without an ellipsis; very long labels may render smaller than 8px.
+Dashboard key previews use the same renderer as the physical Stream Deck.
 Large text reduces the space available for its symbol. The reserved Home key
 keeps its house icon and default size.
 
@@ -188,3 +190,47 @@ The optional HTTPS administration listener exposes the dashboard configuration,
 state, data, and image routes after a password login. Its secure HttpOnly session
 cookie is separate from all integration credentials. It does not expose pairing,
 registration credentials, or `/bridge`. See [network administration](DEPLOYMENT.md#network-administration).
+
+### Source snapshots
+
+`POST /api/data/preview` accepts a data-source object (`id`, `name`, `url`,
+`interval`, `authEnv`) and fetches it immediately without saving it or updating
+the polling cache. It returns `{value, error, updatedAt}`; `updatedAt` is a Unix
+timestamp in seconds. Upstream failure returns **502**, with `value` and
+`updatedAt` set to `null`. Invalid configuration returns **422**. Remote requests
+require an admin session and same-origin protection, just like configuration
+writes. Credentials stay on the service; previews use widget-data redaction,
+256 KiB response limits, and an eight-second total deadline.
+
+### Widget layouts and rules
+
+Configuration uses `gridVersion: 2`: 24 columns, 48 rows, with zero-based `x`/`y`
+and `w`/`h` spans. Stored version-1 layouts migrate once by doubling coordinates
+and spans, and incrementing the configuration revision. Updates retain their
+existing data-backup rollback behavior; older versions cannot read the new
+configuration format without restoring their corresponding backup.
+
+Widgets support `textColor`, `iconColor`, `backgroundColor` (`#RRGGBB` or `null`),
+`fontSize` (8–96px or `null` for automatic), `align` (`left`, `center`, `right`),
+`padding` (0–48px), and `rules`. A `kind: "layout"` widget additionally has
+`rows`/`columns` (1–6 integer weights, each 1–12), `gap` (0–32px), and up to 24
+`items`. Each item has its own content, styles, and rules, plus zero-based
+`row`/`column` and `rowSpan`/`columnSpan`. Items cannot overlap. Supported item
+kinds are `text`, `value`, `list`, `clock`, and `icon`; nested layouts are rejected.
+
+Each rule compares `source` and `path` using an `operator`, with a typed scalar
+`value`, and changes one `target` (`textColor`, `iconColor`, `backgroundColor`, or
+`visible`) using `color` or `visible`. For example:
+
+```json
+{"source":"system","path":"memoryPercent","operator":"gte","value":80,
+ "target":"backgroundColor","color":"#7f1d1d"}
+```
+
+Operators are `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `contains`, `exists`, `missing`,
+`truthy`, and `falsy`. Equality is type-sensitive; ordered comparisons require
+numbers. `exists` excludes missing and null values; `missing` matches both.
+`truthy` matches true, nonzero finite numbers, and nonempty strings; `falsy`
+matches false, zero, empty strings, and null. Missing paths otherwise do not
+match. Unavailable or stale sources never trigger rules. Rules run in order,
+with the last matching rule winning for each property. No code is evaluated.
