@@ -7,6 +7,23 @@ GitHub release tags use the `v` prefix, for example `v1.0.0`.
 
 ## [Unreleased]
 
+## [0.1.0-pre7] - 2026-11-23
+
+**Test version / proof of concept.** These changes still require validation on
+the physical Raspberry Pi setup.
+
+### Added
+
+- Optional overlapping items inside custom-layout widgets, with later items appearing above earlier ones. Dashboard widgets still cannot overlap.
+
+### Fixed
+
+- Widget icons shrink to fit smaller rows and columns instead of being cut off, and recover their size when space becomes available again.
+
+**Downgrade compatibility:** After saving configuration with this version,
+restoring an earlier release also requires restoring the pre-update database;
+earlier releases do not recognize the new overlap setting.
+
 ## [0.1.0-pre6] - 2026-11-23
 
 **Test version / proof of concept.** These changes still require validation on
@@ -113,7 +130,8 @@ extension session have not yet been validated on the target setup.
 - English and German interfaces.
 - Raspberry Pi OS/Debian installation and updates from published GitHub releases, with remembered stable/beta channels, data preservation, and recovery after a failed activation.
 
-[Unreleased]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre6...main
+[Unreleased]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre7...main
+[0.1.0-pre7]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre6...v0.1.0-pre7
 [0.1.0-pre6]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre5...v0.1.0-pre6
 [0.1.0-pre5]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre4...v0.1.0-pre5
 [0.1.0-pre4]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre3...v0.1.0-pre4
