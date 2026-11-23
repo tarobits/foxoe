@@ -7,6 +7,33 @@ GitHub release tags use the `v` prefix, for example `v1.0.0`.
 
 ## [Unreleased]
 
+## [0.1.0-pre6] - 2026-11-23
+
+**Test version / proof of concept.** These changes still require validation on
+the physical Raspberry Pi, Stream Deck, and live Chromium setup.
+
+### Added
+
+- Custom widgets containing text, live values, lists, clocks, and icons in adjustable rows and columns, with text sizes, alignment, spacing, and text, icon, and background colors.
+- Visual rules for conditional widget and item visibility and colors based on data-source fields.
+- JSON previews that fetch current, unsaved data-source settings, with a timestamp and refresh control.
+- Fox illustration on the loading screen.
+
+### Changed
+
+- Dashboard placement uses 24 columns and 48px rows, with automatic migration of existing layouts.
+- The browser Home control starts as a collapsible edge tab and can be dismissed by tapping outside, tapping the tab again, or pressing Escape.
+
+### Fixed
+
+- Stream Deck labels wrap and shrink to retain the full name without an ellipsis; dashboard previews now show the actual key rendering.
+- Invalid JSON numbers from data sources fail cleanly instead of breaking data responses.
+
+**Downgrade compatibility:** The migrated dashboard configuration cannot be read
+by earlier releases. To downgrade after a successful update, restore the
+pre-update database together with the earlier release. Failed-update rollback
+continues to restore the previous database automatically.
+
 ## [0.1.0-pre5] - 2026-11-23
 
 **Test version / proof of concept.** These changes still require validation on
@@ -86,7 +113,8 @@ extension session have not yet been validated on the target setup.
 - English and German interfaces.
 - Raspberry Pi OS/Debian installation and updates from published GitHub releases, with remembered stable/beta channels, data preservation, and recovery after a failed activation.
 
-[Unreleased]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre5...main
+[Unreleased]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre6...main
+[0.1.0-pre6]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre5...v0.1.0-pre6
 [0.1.0-pre5]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre4...v0.1.0-pre5
 [0.1.0-pre4]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre3...v0.1.0-pre4
 [0.1.0-pre3]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre2...v0.1.0-pre3
