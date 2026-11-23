@@ -1,0 +1,56 @@
+<!doctype html><html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dashboard fit regression</title><div id="app"></div>
+<script type="module">
+import {createApp} from 'vue';
+import App from '/frontend/App.vue';
+import '/frontend/style.css';
+const params = new URLSearchParams(location.search);
+const rows = Number(params.get('rows') || 8);
+const base = {kind:'text',title:'',text:'Dashboard fitting check',source:'system',path:'',itemPath:'',unit:'',icon:null,padding:24,gap:8,columns:[1],rows:[1],items:[],rules:[]};
+const config = {gridVersion:2,revision:1,title:'FoxOE',locale:'en',brightness:65,apps:[],sources:[],widgets:[
+  {...base,id:'first',x:0,y:0,w:12,h:4}, {...base,id:'last',x:12,y:rows-4,w:12,h:4},
+]};
+window.fetch = async url => ({ok:true,status:200,json:async()=>url==='/api/config'?config:url==='/api/state'?{connected:false,device:'disconnected',configRevision:1,buttons:[]}: {}});
+createApp(App).mount('#app');
+const wait = () => new Promise(resolve => setTimeout(resolve,350));
+const result = document.createElement('output');
+result.style.cssText='position:fixed;bottom:4px;left:4px;z-index:100;background:#111827;color:white;font:12px system-ui';
+document.body.append(result);
+function check(label) {
+  const main = document.querySelector('.dashboard'), grid = document.querySelector('.widget-grid');
+  const viewport = document.querySelector('.widget-viewport'), dock = document.querySelector('.app-dock');
+  if (!main || !grid || !viewport || !dock) throw new Error(label+': dashboard unavailable');
+  const area = viewport.getBoundingClientRect();
+  for (const item of [grid,...grid.querySelectorAll('.widget-panel')]) {
+    const box = item.getBoundingClientRect();
+    if (box.width<=0 || box.height<=0 || box.left<area.left-1 || box.right>area.right+1 || box.top<area.top-1 || box.bottom>area.bottom+1) throw new Error(label+': grid exceeds viewport');
+  }
+  if (grid.getBoundingClientRect().bottom>dock.getBoundingClientRect().top+1) throw new Error(label+': grid covers dock');
+  const before=main.scrollTop; main.scrollTop=9999;
+  if (main.scrollTop!==before) throw new Error(label+': dashboard can scroll');
+  if (document.documentElement.scrollHeight>innerHeight+1) throw new Error(label+': document scrolls');
+}
+try {
+  await wait(); check('Display');
+  document.querySelector('[aria-label="Edit dashboard"]').click();
+  await wait(); check('Editing');
+  const panel = document.querySelector('.widget-panel');
+  const grid = document.querySelector('.widget-grid');
+  const step = grid.getBoundingClientRect().width / 24;
+  const move = (selector, end = 'pointerup') => {
+    panel.querySelector(selector).dispatchEvent(new PointerEvent('pointerdown',{button:0,clientX:100,clientY:100,bubbles:true}));
+    window.dispatchEvent(new PointerEvent('pointermove',{clientX:100+step,clientY:100}));
+    window.dispatchEvent(new PointerEvent(end));
+  };
+  move('.drag-handle', 'pointercancel'); await wait();
+  if (panel.style.gridColumnStart !== '1') throw new Error('Cancelled drag changed position');
+  move('.drag-handle'); await wait();
+  if (panel.style.gridColumnStart !== '2') throw new Error('Scaled drag moved wrong column count');
+  move('.resize-handle'); await wait();
+  if (panel.style.gridColumnEnd !== 'span 13') throw new Error('Scaled resize changed wrong column count');
+  check('Drag and resize');
+  document.querySelector('.header-actions .secondary').click();
+  await wait(); check('Cancel');
+  if (panel.style.gridColumnStart !== '1' || panel.style.gridColumnEnd !== 'span 12') throw new Error('Cancel retained layout edits');
+  result.textContent=`PASS ${innerWidth}×${innerHeight}: ${rows} rows, display/edit/drag/resize/cancel`;
+} catch(error) { result.textContent='FAIL '+error.message; }
+</script></html>

@@ -9,6 +9,7 @@ import WidgetContent from './WidgetContent.vue';
 import Demo from './Demo.vue';
 import { t, locale } from './i18n';
 import { firstSpace, fits, itemFits, appearance, contentStyle, usesSource } from './model.js';
+import { useDashboardViewport, dashboardDragDelta } from './dashboardViewport';
 import type { Config, Widget, Source, DeckState, DataEntry } from './types';
 
 defineProps<{ remote?: boolean }>();
@@ -32,10 +33,12 @@ const selected = ref<Widget>();
 const widgetError = ref('');
 const dialog = ref<HTMLDialogElement>();
 const grid = ref<HTMLElement>();
+const viewport = ref<HTMLElement>();
 const closingDialog = ref(false);
 const preview = ref<Widget | null>(null);
 const active = computed(() => (editing.value || screen.value === 'settings') && draft.value ? draft.value : config.value);
 const rows = computed(() => Math.max(2, ...((active.value?.widgets || []).map(widget => widget.y + widget.h))));
+const canvas = useDashboardViewport(viewport, rows);
 const isDemo = location.pathname === '/demo';
 const abort = new AbortController();
 let pollTimer: ReturnType<typeof setTimeout>;
@@ -162,11 +165,12 @@ function keyMove(event: KeyboardEvent, widget: Widget, resize = false) {
 function startDrag(event: PointerEvent, widget: Widget, resize = false) {
   if (event.button !== 0 || !draft.value || !grid.value) return;
   event.preventDefault(); removeDrag?.();
-  const width = grid.value.clientWidth / 24;
+  const width = grid.value.clientWidth;
+  const scale = grid.value.getBoundingClientRect().width / width;
   const startX = event.clientX; const startY = event.clientY;
   const original = clone(widget);
   const move = (pointer: PointerEvent) => {
-    const dx = Math.round((pointer.clientX - startX) / width); const dy = Math.round((pointer.clientY - startY) / 56);
+    const { x: dx, y: dy } = dashboardDragDelta(pointer.clientX - startX, pointer.clientY - startY, scale, width);
     preview.value = { ...original, ...(resize ? { w: Math.max(2, Math.min(24 - original.x, original.w + dx)), h: Math.max(1, Math.min(24, 48 - original.y, original.h + dy)) } : { x: Math.max(0, Math.min(24 - original.w, original.x + dx)), y: Math.max(0, Math.min(48 - original.h, original.y + dy)) }) };
   };
   const end = () => {
@@ -207,7 +211,8 @@ onUnmounted(() => { abort.abort(); clearTimeout(pollTimer); clearInterval(clockT
       <main v-if="screen === 'home'" key="home" class="dashboard" :class="{ editing }">
         <Transition name="notice"><div v-if="editing" class="edit-toolbar"><span>{{ t('editDashboard') }}</span><button class="secondary" @click="editWidget()"><Icon name="plus" />{{ t('addWidget') }}</button></div></Transition>
         <div v-if="!active?.widgets.length" class="empty-state"><Icon name="keypad" /><h2>{{ t('noWidgets') }}</h2><button class="primary" @click="beginEdit(); editWidget()">{{ t('addWidget') }}</button></div>
-        <div v-else ref="grid" class="widget-grid" :style="{ gridTemplateRows: `repeat(${rows}, 48px)` }">
+        <div v-else ref="viewport" class="widget-viewport">
+        <div ref="grid" class="widget-grid" :style="{ width: `${canvas.width}px`, height: `${canvas.height}px`, transform: `translateX(-50%) scale(${canvas.scale})`, gridTemplateRows: `repeat(${rows}, 48px)` }">
           <TransitionGroup name="surface">
           <article v-for="widget in active?.widgets" v-show="editing || appearance(widget, data).visible" :key="widget.id" class="widget-panel" :class="{ moving: preview?.id === widget.id, invalid: preview?.id === widget.id && !fits(preview, active!.widgets), 'rule-hidden': editing && !appearance(widget, data).visible }" :style="{ ...placement(widget), ...contentStyle(widget, data), padding: `${widget.padding}px`, paddingTop: editing ? `${Math.max(56, widget.padding)}px` : undefined }">
             <Transition name="notice"><div v-if="editing" class="widget-tools"><button class="icon-button drag-handle" :aria-label="t('moveWidget')" @pointerdown="startDrag($event, widget)" @keydown="keyMove($event, widget)"><Icon name="move" /></button><button class="icon-button" :aria-label="t('editWidget')" @click="editWidget(widget)"><Icon name="edit" /></button></div></Transition>
@@ -215,6 +220,7 @@ onUnmounted(() => { abort.abort(); clearTimeout(pollTimer); clearInterval(clockT
             <Transition name="notice"><button v-if="editing" class="icon-button resize-handle" :aria-label="t('resizeWidget')" @pointerdown="startDrag($event, widget, true)" @keydown="keyMove($event, widget, true)"><Icon name="resize" /></button></Transition>
           </article>
           </TransitionGroup>
+        </div>
         </div>
       </main>
       <main v-else-if="draft" key="settings" class="settings-view">

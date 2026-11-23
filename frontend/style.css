@@ -64,8 +64,11 @@ h2 { font-size: 17px; font-weight: 650; letter-spacing: -.25px; line-height: 1.4
 .brand-mark { width: 36px; height: 36px; flex: 0 0 auto; }
 .brand > .icon { width: 28px; height: 28px; color: var(--accent-hover); }
 .header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-.dashboard { flex: 1; min-height: 0; padding: 12px 28px 24px; overflow: auto; }
-.widget-grid { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); grid-auto-rows: 48px; gap: 8px; align-content: start; padding: 4px; }
+.dashboard { display: flex; flex-direction: column; flex: 1; min-height: 0; padding: 12px 28px 24px; overflow: hidden; }
+.widget-viewport { position: relative; flex: 1; min-width: 0; min-height: 0; overflow: clip; }
+.widget-grid { position: absolute; top: 0; left: 50%; transform-origin: top center; display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); grid-auto-rows: 48px; gap: 8px; align-content: start; padding: 4px; }
+.dashboard .widget-content, .dashboard .widget-cell { overflow: clip; }
+.dashboard .edit-toolbar { flex-shrink: 0; }
 .widget-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; min-width: 0; min-height: 0; padding: 24px; position: relative; overflow: hidden; }
 .widget-content { height: 100%; display: flex; flex-direction: column; min-height: 0; overflow: auto; }
 .widget-content h2 { margin-bottom: 12px; color: var(--widget-text-color, var(--text-secondary)); }
@@ -217,9 +220,6 @@ legend { margin-bottom: 12px; font-size: 14px; font-weight: 600; }
   .brand > .icon { display: none; }
   h1 { font-size: 27px; }
   .dashboard, .settings-view { padding: 8px 16px 20px; }
-  .widget-grid { display: flex; flex-direction: column; gap: 16px; }
-  .widget-panel { min-height: 160px; max-height: 360px; }
-  .widget-content { min-height: 110px; max-height: 290px; }
   .clock-time { font-size: var(--widget-font-size, 48px); }
   .metric { font-size: var(--widget-font-size, 40px); }
   .app-dock { padding: 12px; gap: 0; min-height: 96px; }

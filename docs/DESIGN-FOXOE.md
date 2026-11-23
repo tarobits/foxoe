@@ -50,19 +50,21 @@ truncate within bounded tiles.
 ## Layout
 
 The reference application's sidebar is replaced by the user-selected Home
-composition: a compact header, a scrolling widget region and a separate bottom
-application dock. The dock remains reachable while Home widgets scroll. Settings
+composition: a compact header, a fitted widget canvas and a separate bottom
+application dock. Home widgets do not scroll. Settings
 use a separate scrolling region with sticky tabs; the Home dock is not displayed
 in settings.
 
-The desktop widget grid has twelve columns, 96px row tracks and 16px gaps.
-Widget panels use 24px padding. The shell uses the viewport height with a 400px
-minimum, and its header has 28px horizontal padding. Overflow is contained by
-the dashboard and individual widget contents.
+The widget grid has 24 columns, 48px row tracks and 8px gaps. Its logical canvas
+is at least 968px wide and extends through the last occupied row. The entire
+canvas, including widget contents, scales down uniformly to fit the available
+space above the dock. Saved coordinates are unchanged; pointer movement accounts
+for the scale. Widget padding is configurable (24px by default). The shell uses
+the viewport height with a 400px minimum, and its header has 28px horizontal
+padding. Dashboard and widget content overflow cannot be scrolled.
 
-At widths of 700px or less, widgets become a vertical list, shell spacing
-contracts, forms wrap and the dock scrolls horizontally. Widget panels have
-bounded heights with independently scrolling content. Pointer drag/resize
+At widths of 700px or less, widgets retain their grid layout, shell spacing
+contracts, forms wrap and the dock scrolls horizontally. Pointer drag/resize
 handles are hidden at this breakpoint; the widget dialog retains numeric
 position and size controls. Dock device status is hidden on narrow screens;
 connection details remain available in system settings.
@@ -110,7 +112,7 @@ content rather than translated UI labels.
 
 - Extend the supplied visual system and reuse the shared CSS before introducing
   another style variant.
-- Keep the Home dock independent of widget scrolling.
+- Keep the Home dock outside the scaled, non-scrolling widget canvas.
 - Preserve 44px or larger interaction targets and room for focus outlines.
 - Keep operational states explicit and interface copy concise and translated.
 - Use the existing timing and easing tokens for new transitions, including
