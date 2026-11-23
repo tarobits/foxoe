@@ -30,7 +30,12 @@ def test_driver_api_and_recovery_after_failed_write(monkeypatch):
     # Use the library's real connection method, so API drift is caught.
     device_class = importlib.import_module('StreamDeck.Devices.StreamDeck').StreamDeck
     assert hasattr(device_class, 'connected')
-    controller = Controller(Configuration(), 'http://127.0.0.1:8765')
+    config = Configuration()
+    config.apps[0].icon = None
+    config.apps[0].textSize = 32
+    controller = Controller(config, 'http://127.0.0.1:8765')
+    controller.connect('browser')
+    controller.context('browser', 'doc', 'http://127.0.0.1:8765/')
     worker = DeviceWorker(controller, ImmediateLoop())
     worker.stop = NoWaitStop()
     worker.update()
@@ -46,6 +51,8 @@ def test_driver_api_and_recovery_after_failed_write(monkeypatch):
         def set_key_image(self, index, image):
             self.writes += 1
             if self.fails: raise OSError('test USB failure')
+            if index == 0:
+                assert image.tobytes() == key_image(config.apps[0].name, False, False, icon=None, text_size=32).tobytes()
             if index == 14: worker.stop.set()
         def close(self): self.closed = True
     first, second = Deck(True), Deck(False)
@@ -112,3 +119,22 @@ def test_generated_icons_cover_browser_sizes_and_all_supported_key_icons():
         assert builtin_icon(name) is not None, f'Missing generated asset: {name}; run npm run build:icons'
     fox = (root / 'public/foxoe.svg').read_text()
     assert '<text' not in fox and '<rect' not in fox
+
+
+def test_text_only_sizes_wrap_within_key_and_keep_home_reserved():
+    from PIL import ImageChops
+    small = key_image('42', False, False, icon=None, text_size=8)
+    large = key_image('42', False, False, icon=None, text_size=32)
+    def bounds(image):
+        return ImageChops.difference(image, Image.new('RGB', image.size, '#1f2937')).getbbox()
+    a, b = bounds(small), bounds(large)
+    assert b[2] - b[0] > a[2] - a[0]
+    assert b[3] - b[1] > a[3] - a[1]
+    for icon in (None, 'user', 'arrow-down-tray'):
+        for size in (8, 14, 24, 32):
+            image = key_image('WWWW Long label\nÄÖÜ 123', False, False, icon=icon, text_size=size)
+            box = bounds(image)
+            assert 4 <= box[0] < box[2] <= 68
+            assert 4 <= box[1] < box[3] <= 68
+    assert key_image('Home', False, True, icon=None).tobytes() == key_image('Home', False, True, icon='home').tobytes()
+    assert key_image('42', True, False, icon=None, text_size=32).tobytes() != large.tobytes()

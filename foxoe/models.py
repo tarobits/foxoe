@@ -1,10 +1,13 @@
 """Validate configuration and app-supplied controls before changing live state."""
 from typing import Literal
+import json
+from pathlib import Path
 from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-Icon = Literal["window", "printer", "home", "keypad", "play", "backspace", "check", "close", "back", "reload", "foxoe"]
+ICON_NAMES = frozenset(json.loads(Path(__file__).with_name('icon_catalog.json').read_text())) | {'foxoe'}
+Icon = Literal[tuple(sorted(ICON_NAMES))]
 
 
 class StrictModel(BaseModel):
@@ -15,7 +18,8 @@ class Application(StrictModel):
     id: str = Field(pattern=r"^[a-z][a-z0-9-]{0,39}$")
     name: str = Field(min_length=1, max_length=60)
     url: str = Field(min_length=1, max_length=2048)
-    icon: Icon = "window"
+    icon: Icon | None = "window"
+    textSize: int = Field(default=14, ge=8, le=32, strict=True)
     image: str | None = Field(default=None, pattern=r"^[a-zA-Z0-9_-]{1,40}$")
     images: dict[str, str] = Field(default_factory=dict, max_length=32)
     screens: list["Layout"] = Field(default_factory=list, max_length=16)
@@ -84,7 +88,8 @@ class Configuration(StrictModel):
 class Button(StrictModel):
     id: str = Field(min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_.:-]+$")
     label: str = Field(min_length=1, max_length=32)
-    icon: Icon = "window"
+    icon: Icon | None = "window"
+    textSize: int = Field(default=14, ge=8, le=32, strict=True)
     disabled: bool = False
     image: str | None = Field(default=None, pattern=r"^[a-zA-Z0-9_-]{1,40}$")
 

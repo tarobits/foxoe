@@ -67,6 +67,11 @@ def test_app_keys_are_scoped_and_removal_revokes_them(registration):
     {'screens': [{'id': 'full', 'buttons': [None] * 15}]},
     {'images': {}, 'image': 'missing'},
     {'images': {'../escape': png()}},
+    {'textSize': True},
+    {'textSize': 33},
+    {'icon': '../../etc/passwd'},
+    {'icon': 'not-a-heroicon'},
+    {'screens': [{'id': 'main', 'buttons': [{'id': 'x', 'label': 'X', 'textSize': 7}]}]},
 ])
 def test_invalid_registration_is_atomic_and_next_request_succeeds(registration, change):
     client, local = registration
@@ -153,3 +158,25 @@ def test_revocation_between_authorization_and_commit_cannot_overwrite_new_owner(
         store.register(app, assets, old_key, updating=True)
     assert store.load().revision == before
     assert store.authorize_app(app.id, new_key)
+
+
+def test_registration_preserves_null_icons_sizes_and_updates_after_restart(registration):
+    from foxoe.store import Store
+    client, local = registration
+    value = {**manifest(), 'icon': None, 'image': None, 'textSize': 28,
+             'screens': [{'id': 'main', 'buttons': [{'id': 'a', 'label': '42', 'icon': None, 'textSize': 32}]}]}
+    response = client.post('/v1/apps', json=value, headers={'Authorization': 'Bearer ' + local.state.store.registration_token})
+    assert response.status_code == 201
+    stored = next(app for app in local.state.store.load().apps if app.id == 'printer')
+    assert stored.icon is None and stored.textSize == 28
+    assert stored.screens[0].buttons[0].icon is None
+    assert stored.screens[0].buttons[0].textSize == 32
+    key = response.json()['appCredential']
+    headers = {'Authorization': 'Bearer ' + key}
+    assert client.put('/v1/apps/printer', json={**value, 'textSize': None}, headers=headers).status_code == 422
+    assert next(app for app in local.state.store.load().apps if app.id == 'printer') == stored
+    assert client.put('/v1/apps/printer', json={**value, 'icon': 'user', 'textSize': 8}, headers=headers).status_code == 200
+    # Re-open the persisted store to ensure the new fields survive serialization.
+    reloaded = Store(local.state.store.path.parent).load()
+    updated = next(app for app in reloaded.apps if app.id == 'printer')
+    assert updated.icon == 'user' and updated.textSize == 8

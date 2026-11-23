@@ -22,7 +22,7 @@ foxoe = "foxoe.__main__:main"
 packages = ["foxoe"]
 
 [tool.setuptools.package-data]
-foxoe = ["assets/icons/*.png"]
+foxoe = ["assets/icons/*.png", "icon_catalog.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

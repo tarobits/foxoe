@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse, Response
 from PIL import Image, ImageOps, UnidentifiedImageError
 from pydantic import Field, ValidationError
 
-from .models import Application, Layout, StrictModel
+from .models import Application, Layout, StrictModel, Icon
 
 
 class Manifest(StrictModel):
@@ -24,7 +24,8 @@ class Manifest(StrictModel):
     id: str = Field(pattern=r"^[a-z][a-z0-9-]{0,39}$")
     name: str = Field(min_length=1, max_length=60)
     url: str = Field(max_length=2048)
-    icon: str = "window"
+    icon: Icon | None = "window"
+    textSize: int = Field(default=14, ge=8, le=32, strict=True)
     image: str | None = None
     images: dict[str, str] = Field(default_factory=dict, max_length=32)
     screens: list[Layout] = Field(default_factory=list, max_length=16)
@@ -63,7 +64,7 @@ def prepare_manifest(manifest: Manifest):
         digest, png = normalize_image(encoded)
         images[name] = digest
         assets[digest] = png
-    app = Application(id=manifest.id, name=manifest.name, url=manifest.url, icon=manifest.icon,
+    app = Application(id=manifest.id, name=manifest.name, url=manifest.url, icon=manifest.icon, textSize=manifest.textSize,
                       image=manifest.image, images=images, screens=manifest.screens)
     if app.url.startswith("/"):
         raise ValueError("absolute_url_required")

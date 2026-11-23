@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { createVNode } from 'vue';
 import { renderToString } from 'vue/server-renderer';
 import { Resvg, initWasm } from '@resvg/resvg-wasm';
-import { HomeIcon, PrinterIcon, WindowIcon, Squares2X2Icon, PlayIcon, BackspaceIcon, CheckIcon, XMarkIcon, ArrowLeftIcon, ArrowPathIcon } from '@heroicons/vue/24/outline';
+import * as icons from '@heroicons/vue/24/outline';
 
 const require = createRequire(import.meta.url);
 const root = new URL('../', import.meta.url);
@@ -23,10 +23,14 @@ await directory('foxoe/assets/icons/');
 const fox = await readFile(new URL('public/foxoe.svg', root), 'utf8');
 for (const size of [16, 32, 48, 128]) await png(fox, size, `extension/icons/foxoe-${size}.png`);
 await png(fox, 96, 'foxoe/assets/icons/foxoe.png');
-const actions = { home: HomeIcon, printer: PrinterIcon, window: WindowIcon, keypad: Squares2X2Icon,
-  play: PlayIcon, backspace: BackspaceIcon, check: CheckIcon, close: XMarkIcon, back: ArrowLeftIcon, reload: ArrowPathIcon };
-for (const [name, component] of Object.entries(actions)) {
-  const svg = (await renderToString(createVNode(component))).replaceAll('currentColor', '#F8FAFC');
-  await png(svg, 96, `foxoe/assets/icons/${name}.png`);
+const catalog = JSON.parse(await readFile(new URL('foxoe/icon_catalog.json', root), 'utf8'));
+const symbols = [];
+for (const [name, componentName] of Object.entries(catalog)) {
+  const component = icons[componentName];
+  if (!component || !/^[a-z][a-z0-9-]*$/.test(name)) throw new Error(`Invalid icon catalog entry: ${name}`);
+  const svg = await renderToString(createVNode(component));
+  symbols.push(`<symbol id="${name}" viewBox="0 0 24 24">${svg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '')}</symbol>`);
+  await png(svg.replaceAll('currentColor', '#F8FAFC'), 96, `foxoe/assets/icons/${name}.png`);
 }
+await writeFile(new URL('public/heroicons.svg', root), `<svg xmlns="http://www.w3.org/2000/svg">${symbols.join('')}</svg>`);
 console.log(`Built FoxOE and Stream Deck icons in ${fileURLToPath(root)}`);

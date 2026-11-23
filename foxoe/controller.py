@@ -124,7 +124,7 @@ class Controller:
         result: list[dict | None] = [None] * 15
         if self.home and self.owner:
             for index, app in enumerate(self.config.apps):
-                result[index] = {"id": app.id, "label": app.name, "icon": app.icon, "image": app.images.get(app.image), "kind": "launch", "disabled": False}
+                result[index] = {"id": app.id, "label": app.name, "icon": app.icon, "textSize": app.textSize, "image": app.images.get(app.image), "kind": "launch", "disabled": False}
         elif self.app_id and self.stack:
             app = next(app for app in self.config.apps if app.id == self.app_id)
             for index, button in enumerate(self.stack[-1].buttons):

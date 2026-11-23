@@ -12,3 +12,4 @@ __pycache__/
 .impeccable/mocks/
 extension/icons/*.png
 foxoe/assets/icons/*.png
+public/heroicons.svg
