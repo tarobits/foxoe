@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ruleMatches, appearance, itemFits, usesSource } from '../frontend/model.js';
+import { ruleMatches, appearance, itemFits, firstItemSpace, usesSource } from '../frontend/model.js';
 import { createServer } from 'vite';
 import { createSSRApp } from 'vue';
 import { renderToString } from 'vue/server-renderer';
@@ -47,6 +47,23 @@ test('item spans reject overlaps and retain references used in rules and child i
   assert.ok(!usesSource(widget, 'unrelated'));
 });
 
+test('item overlap opt-in permits shared cells while retaining bounds', () => {
+  const first = {id:'first', row:0, column:0, rowSpan:1, columnSpan:1};
+  const widget = {rows:[1], columns:[1,1], items:[first], allowOverlap:true};
+  assert.ok(itemFits({...first, id:'second'}, widget));
+  assert.ok(!itemFits({...first, id:'second'}, {...widget, allowOverlap:false}));
+  assert.ok(!itemFits({...first, id:'second'}, {...widget, allowOverlap:'true'}));
+  const second = {...first, id:'second'};
+  assert.equal(firstItemSpace(second, widget).column, 1);
+  const full = {...widget, columns:[1]};
+  assert.equal(firstItemSpace(second, full).column, 0);
+  assert.equal(firstItemSpace(second, {...full, allowOverlap:false}), null);
+  assert.equal(firstItemSpace({...second, columnSpan:3}, full), null);
+  for (const change of [{row:1}, {column:2}, {rowSpan:2}, {columnSpan:3}, {column:.5}, {rowSpan:0}]) {
+    assert.ok(!itemFits({...first, id:'second', ...change}, widget));
+  }
+});
+
 test('composed widgets render live values, escape content, and reveal hidden items only in editing', async () => {
   const server = await createServer({ server: { middlewareMode: true, watch: null, ws: false }, optimizeDeps: { noDiscovery: true, entries: [] }, appType: 'custom' });
   try {
@@ -68,5 +85,16 @@ test('composed widgets render live values, escape content, and reveal hidden ite
     assert.match(display, /display:none/);
     assert.ok(!editor.includes('display:none'));
     assert.match(editor, /rule-hidden/);
+    const { default: WidgetEditor } = await server.ssrLoadModule('/frontend/WidgetEditor.vue');
+    const full = {...widget, columns:[1], rows:[1], items:[widget.items[0]], allowOverlap:false};
+    const renderEditor = widget => renderToString(createSSRApp(WidgetEditor, {widget, sources:[], data, now:new Date()}));
+    const blocked = await renderEditor(full);
+    assert.match(blocked, /<button[^>]*disabled[^>]*>[\s\S]*?Add item/);
+    const allowed = await renderEditor({...full, allowOverlap:true});
+    assert.match(allowed.match(/<input[^>]*type="checkbox"[^>]*>/)[0], /\bchecked\b/);
+    const addButton = allowed.match(/<button[^>]*>[\s\S]*?Add item<\/button>/)[0];
+    assert.ok(!addButton.includes('disabled'));
+    const capped = await renderEditor({...full, allowOverlap:true, items:Array.from({length:24}, (_, n) => ({...full.items[0], id:`item-${n}`}))});
+    assert.match(capped, /<button[^>]*disabled[^>]*>[\s\S]*?Add item/);
   } finally { await server.close(); }
 });

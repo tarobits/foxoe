@@ -5,7 +5,7 @@ import { t } from './i18n';
 import Icon from './Icon.vue';
 import IconPicker from './IconPicker.vue';
 import WidgetContent from './WidgetContent.vue';
-import { itemFits, appearance, contentStyle } from './model.js';
+import { itemFits, firstItemSpace, appearance, contentStyle } from './model.js';
 const props = defineProps<{ widget: Widget; sources: Source[]; data: Record<string, DataEntry>; now: Date }>();
 const selected = ref(''), tab = ref<'content' | 'appearance' | 'rules'>('content');
 const item = computed(() => props.widget.items.find(item => item.id === selected.value));
@@ -14,12 +14,11 @@ const unary = ['exists', 'missing', 'truthy', 'falsy'];
 const operators: WidgetRule['operator'][] = ['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'contains', 'exists', 'missing', 'truthy', 'falsy'];
 function addItem() {
   if (props.widget.items.length >= 24) return;
-  for (let row = 0; row < props.widget.rows.length; row++) for (let column = 0; column < props.widget.columns.length; column++) {
-    const candidate: WidgetItem = { id: `item-${crypto.randomUUID().slice(0, 8)}`, kind: 'text', title: '', text: '', source: 'system', path: '', itemPath: '', unit: '', icon: 'window', row, column, rowSpan: 1, columnSpan: 1, rules: [], align: 'left' };
-    if (itemFits(candidate, props.widget)) { props.widget.items.push(candidate); selected.value = candidate.id; tab.value = 'content'; return; }
-  }
+  const item: WidgetItem = { id: `item-${crypto.randomUUID().slice(0, 8)}`, kind: 'text', title: '', text: '', source: 'system', path: '', itemPath: '', unit: '', icon: 'window', row: 0, column: 0, rowSpan: 1, columnSpan: 1, rules: [], align: 'left' };
+  const candidate = firstItemSpace(item, props.widget);
+  if (candidate) { props.widget.items.push(candidate); selected.value = candidate.id; tab.value = 'content'; }
 }
-const hasSpace = computed(() => props.widget.items.length < 24 && props.widget.items.reduce((n, item) => n + item.rowSpan * item.columnSpan, 0) < props.widget.rows.length * props.widget.columns.length);
+const hasSpace = computed(() => props.widget.items.length < 24 && firstItemSpace({ id: '', rowSpan: 1, columnSpan: 1 }, props.widget) !== null);
 function removeItem() {
   props.widget.items = props.widget.items.filter(item => item.id !== selected.value); selected.value = '';
 }
@@ -49,6 +48,7 @@ watch(() => props.widget.kind, () => { selected.value = ''; });
       <div v-if="tab === 'content'" key="content" class="form-stack">
         <div class="form-row"><label class="grow">{{ t('title') }}<input v-model="target.title" maxlength="60"></label><label>{{ t('kind') }}<select v-model="target.kind"><option v-for="kind in ['clock','value','list','text','icon', ...(!item ? ['layout'] : [])]" :key="kind" :value="kind">{{ t(kind) }}</option></select></label></div>
         <template v-if="target.kind === 'layout'">
+          <label class="checkbox-row"><input v-model="widget.allowOverlap" type="checkbox">{{ t('allowItemOverlap') }}</label>
           <div v-for="axis in (['columns', 'rows'] as const)" :key="axis" class="track-editor">
             <div class="section-header"><h3>{{ t(axis) }}</h3><div class="header-actions"><button type="button" class="icon-button" :aria-label="t(axis === 'rows' ? 'addRow' : 'addColumn')" :disabled="widget[axis].length >= 6" @click="widget[axis].push(1)"><Icon name="plus" /></button><button type="button" class="icon-button" :aria-label="t(axis === 'rows' ? 'removeRow' : 'removeColumn')" :disabled="!canRemoveTrack(axis)" @click="widget[axis].pop()"><Icon name="remove" /></button></div></div>
             <div class="track-weights"><label v-for="(_, index) in widget[axis]" :key="index">{{ t(axis === 'rows' ? 'y' : 'x') }} {{ index + 1 }}<input v-model.number="widget[axis][index]" type="number" min="1" max="12" required></label></div>
@@ -67,7 +67,7 @@ watch(() => props.widget.kind, () => { selected.value = ''; });
           <label>{{ t('y') }}<input :value="item.row + 1" type="number" min="1" :max="widget.rows.length" @input="item.row = Number(($event.target as HTMLInputElement).value) - 1"></label>
           <label>{{ t('columnSpan') }}<input v-model.number="item.columnSpan" type="number" min="1" :max="widget.columns.length"></label>
           <label>{{ t('rowSpan') }}<input v-model.number="item.rowSpan" type="number" min="1" :max="widget.rows.length"></label>
-        </div><p v-if="!itemFits(item, widget)" class="data-warning" role="alert">{{ t('itemOverlap') }}</p></fieldset>
+        </div><p v-if="!itemFits(item, widget)" class="data-warning" role="alert">{{ t(widget.allowOverlap ? 'itemBounds' : 'itemOverlap') }}</p></fieldset>
       </div>
       <div v-else-if="tab === 'appearance'" key="appearance" class="form-stack">
         <div class="widget-color-fields"><label v-for="field in (['textColor', 'backgroundColor', 'iconColor'] as const)" :key="field">{{ t(field) }}<input type="color" :value="target[field] || (field === 'backgroundColor' ? '#1f2937' : '#ffffff')" @input="target[field] = ($event.target as HTMLInputElement).value"></label><button type="button" class="secondary" @click="target.textColor = target.backgroundColor = target.iconColor = null">{{ t('resetColors') }}</button></div>

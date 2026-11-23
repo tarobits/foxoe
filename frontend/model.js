@@ -70,7 +70,16 @@ export function contentStyle(item, data) {
 
 export function itemFits(item, widget) {
   if (![item.row, item.column, item.rowSpan, item.columnSpan].every(Number.isInteger) || item.row < 0 || item.column < 0 || item.rowSpan < 1 || item.columnSpan < 1 || item.row + item.rowSpan > widget.rows.length || item.column + item.columnSpan > widget.columns.length) return false;
-  return widget.items.every(other => other.id === item.id || item.column + item.columnSpan <= other.column || item.column >= other.column + other.columnSpan || item.row + item.rowSpan <= other.row || item.row >= other.row + other.rowSpan);
+  return widget.allowOverlap === true || widget.items.every(other => other.id === item.id || item.column + item.columnSpan <= other.column || item.column >= other.column + other.columnSpan || item.row + item.rowSpan <= other.row || item.row >= other.row + other.rowSpan);
+}
+
+export function firstItemSpace(item, widget) {
+  for (let row = 0; row < widget.rows.length; row++) for (let column = 0; column < widget.columns.length; column++) {
+    const candidate = { ...item, row, column };
+    if (itemFits(candidate, { ...widget, allowOverlap: false })) return candidate;
+  }
+  const candidate = { ...item, row: 0, column: 0 };
+  return widget.allowOverlap === true && itemFits(candidate, widget) ? candidate : null;
 }
 
 export function usesSource(widget, source) {

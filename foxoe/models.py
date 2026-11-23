@@ -190,6 +190,7 @@ class Widget(WidgetContent):
     h: int = Field(default=4, ge=1, le=24, strict=True)
     padding: int = Field(default=24, ge=0, le=48, strict=True)
     gap: int = Field(default=8, ge=0, le=32, strict=True)
+    allowOverlap: bool = Field(default=False, strict=True)
     columns: list[Annotated[int, Field(ge=1, le=12, strict=True)]] = Field(default_factory=lambda: [1, 1], min_length=1, max_length=6)
     rows: list[Annotated[int, Field(ge=1, le=12, strict=True)]] = Field(default_factory=lambda: [1], min_length=1, max_length=6)
     items: list[WidgetItem] = Field(default_factory=list, max_length=24)
@@ -203,7 +204,7 @@ class Widget(WidgetContent):
         for index, item in enumerate(self.items):
             if item.row + item.rowSpan > len(self.rows) or item.column + item.columnSpan > len(self.columns):
                 raise ValueError('item_out_of_bounds')
-            for other in self.items[index + 1:]:
+            for other in self.items[index + 1:] if not self.allowOverlap else []:
                 if item.column < other.column + other.columnSpan and item.column + item.columnSpan > other.column and item.row < other.row + other.rowSpan and item.row + item.rowSpan > other.row:
                     raise ValueError('overlapping_items')
         return self

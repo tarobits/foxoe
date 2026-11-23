@@ -101,3 +101,36 @@ def test_failed_widget_save_is_atomic_and_next_valid_save_works(tmp_path):
         assert client.get('/api/config').json() == before
         before['widgets'][0]['backgroundColor'] = '#123456'
         assert client.put('/api/config', json=before, headers={'origin': 'http://127.0.0.1:8765'}).status_code == 200
+
+
+def test_item_overlap_is_opt_in_and_never_disables_other_validation():
+    value = {'id': 'layout', 'kind': 'layout', 'items': [{'id': 'a'}, {'id': 'b'}]}
+    with pytest.raises(ValidationError):
+        Widget(**value)
+    enabled = Widget(**value, allowOverlap=True)
+    assert enabled.allowOverlap is True
+    assert Widget(id='legacy').allowOverlap is False
+    for change in ({'allowOverlap': 'true'}, {'allowOverlap': 1}, {'allowOverlap': None},
+                   {'items': [{'id': 'a', 'row': 1}]}, {'items': [{'id': 'a'}, {'id': 'a'}]},
+                   {'items': [{'id': 'a', 'columnSpan': 3}]}):
+        with pytest.raises(ValidationError):
+            Widget(**{**value, 'allowOverlap': True, **change})
+    with pytest.raises(ValidationError, match='overlapping_widgets'):
+        Configuration(widgets=[enabled, Widget(id='second', allowOverlap=True)])
+
+
+def test_disabling_item_overlap_is_atomic_and_can_recover(tmp_path):
+    with TestClient(create_app(tmp_path, hardware=False), base_url='http://127.0.0.1:8765') as client:
+        headers = {'origin': 'http://127.0.0.1:8765'}
+        config = client.get('/api/config').json()
+        config['widgets'] = [{'id': 'layout', 'kind': 'layout', 'allowOverlap': True,
+                              'items': [{'id': 'a'}, {'id': 'b'}]}]
+        assert client.put('/api/config', json=config, headers=headers).status_code == 200
+        saved = client.get('/api/config').json()
+        assert Store(tmp_path).load().widgets[0].allowOverlap is True
+        changed = json.loads(json.dumps(saved))
+        changed['widgets'][0]['allowOverlap'] = False
+        assert client.put('/api/config', json=changed, headers=headers).status_code == 422
+        assert client.get('/api/config').json() == saved
+        changed['widgets'][0]['items'][1]['column'] = 1
+        assert client.put('/api/config', json=changed, headers=headers).status_code == 200

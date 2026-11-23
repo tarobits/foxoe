@@ -142,7 +142,7 @@ function closeWidget() {
 function applyWidget() {
   if (!selected.value || !draft.value) return;
   if (!fits(selected.value, draft.value.widgets)) { widgetError.value = t('overlap'); return; }
-  if (selected.value.items.some(item => !itemFits(item, selected.value))) { widgetError.value = t('itemOverlap'); return; }
+  if (selected.value.items.some(item => !itemFits(item, selected.value))) { widgetError.value = t(selected.value.allowOverlap ? 'itemBounds' : 'itemOverlap'); return; }
   const index = draft.value.widgets.findIndex(widget => widget.id === selected.value!.id);
   if (index < 0) draft.value.widgets.push(clone(selected.value)); else draft.value.widgets[index] = clone(selected.value);
   closeWidget();

@@ -160,7 +160,7 @@ textarea { resize: vertical; }
 .widget-dialog form { display: flex; flex-direction: column; max-height: calc(100dvh - 34px); }
 .widget-body { height: 100%; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
 .widget-layout { display: grid; flex: 1; min-height: 0; }
-.widget-cell { min-width: 0; min-height: 0; overflow: auto; }
+.widget-cell { min-width: 0; min-height: 0; overflow: auto; isolation: isolate; }
 .widget-icon-frame { position: relative; flex: 1 1 0; min-width: 0; min-height: 0; }
 .widget-icon-frame .icon { position: absolute; inset: 0; margin-block: auto; margin-inline: var(--widget-icon-margin, 0 auto); width: var(--widget-font-size, 40px); height: var(--widget-font-size, 40px); max-width: 100%; max-height: 100%; object-fit: contain; color: var(--widget-icon-color, currentColor); }
 .layout-heading { margin-bottom: 12px; color: var(--widget-text-color, var(--text-secondary)); }
@@ -173,6 +173,8 @@ textarea { resize: vertical; }
 .widget-editor .section-header { margin-bottom: 8px; }
 .track-weights { display: flex; flex-wrap: wrap; gap: 12px; }
 .track-weights label { flex: 1; min-width: 70px; }
+.checkbox-row { display: flex; align-items: center; gap: 12px; min-height: 48px; cursor: pointer; }
+.checkbox-row input { width: 20px; height: 20px; min-height: 0; accent-color: var(--accent-hover); }
 .widget-color-fields { display: flex; align-items: end; flex-wrap: wrap; gap: 16px; }
 .widget-color-fields input { width: 72px; padding: 4px; }
 .rule-editor { border-top: 1px solid var(--line); padding-top: 20px; }
