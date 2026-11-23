@@ -212,6 +212,7 @@ class WidgetContent(WidgetAppearance):
     id: str = Field(pattern=r"^[a-z][a-z0-9-]{0,39}$")
     kind: Literal["clock", "text", "value", "list", "icon"] = "value"
     title: str = Field(default="", max_length=60)
+    showTitle: bool = Field(default=True, strict=True)
     text: str = Field(default="", max_length=1000)
     source: str = Field(default="system", max_length=40)
     path: str = Field(default="", max_length=200)

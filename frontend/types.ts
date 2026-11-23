@@ -7,7 +7,7 @@ export interface ComparisonFields { source: string; path: string; operator: 'eq'
 export type Condition = (ComparisonFields & { kind: 'comparison'; negate?: boolean }) | { kind: 'and' | 'or'; negate?: boolean; children: Condition[] };
 export interface WidgetRule extends ComparisonFields { condition?: Condition | null; target: 'textColor' | 'backgroundColor' | 'iconColor' | 'visible'; color: string | null; visible: boolean }
 export interface WidgetAppearance { textColor?: string | null; backgroundColor?: string | null; iconColor?: string | null; fontSize?: number | null; align?: 'left' | 'center' | 'right'; rules: WidgetRule[] }
-export interface WidgetElement extends WidgetAppearance { id: string; kind: 'clock' | 'text' | 'value' | 'list' | 'icon' | 'layout'; title: string; text: string; source: string; path: string; itemPath: string; unit: string; icon?: IconName | null }
+export interface WidgetElement extends WidgetAppearance { id: string; kind: 'clock' | 'text' | 'value' | 'list' | 'icon' | 'layout'; title: string; showTitle?: boolean; text: string; source: string; path: string; itemPath: string; unit: string; icon?: IconName | null }
 export interface WidgetItem extends WidgetElement { row: number; column: number; rowSpan: number; columnSpan: number }
 export interface Widget extends WidgetElement { x: number; y: number; w: number; h: number; padding: number; gap: number; allowOverlap?: boolean; columns: number[]; rows: number[]; items: WidgetItem[] }
 export interface Config { gridVersion: 2; revision: number; title: string; locale: 'en' | 'de'; brightness: number; apps: Application[]; sources: Source[]; widgets: Widget[] }

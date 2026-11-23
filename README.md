@@ -146,7 +146,8 @@ Enable **Allow overlaps** in the widget's Content tab to share cells between
 items; later items appear above earlier ones. Dashboard widgets still cannot
 overlap. Icons shrink to fit their cells when rows or columns become smaller.
 **Appearance** controls text, icon, and background colors, text size, alignment,
-padding, and item spacing. **Rules** compare live data fields with typed values to
+padding, and item spacing. Leave a title blank or disable **Show title** to display
+only the content, including for individual items. **Rules** compare live data fields with typed values to
 change colors or visibility, for the whole widget or individual items. Use
 **Combine** to nest AND/OR groups, and **NOT** to invert a condition or group.
 For example, an OR group can contain an AND group and a negated condition:

@@ -1,0 +1,37 @@
+<!doctype html><html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Widget title regression</title>
+<style>body{overflow:auto!important}main{max-width:640px;padding:24px;margin:auto}.row-check{height:48px;width:300px;background:#1f2937;overflow:clip;margin:16px 0}output{display:block;margin:16px 0}</style><div id="app"></div>
+<script type="module">
+import { createApp, h, reactive } from 'vue';
+import WidgetContent from '/frontend/WidgetContent.vue';
+import WidgetEditor from '/frontend/WidgetEditor.vue';
+import '/frontend/style.css';
+const widget=reactive({id:'sample',kind:'text',title:'',text:'One row of content',source:'system',path:'',itemPath:'',unit:'',icon:null,padding:0,gap:0,columns:[1],rows:[1],items:[],rules:[]});
+const props={widget,data:{},now:new Date()};
+createApp({render:()=>h('main',[
+  h('div',{class:'row-check'},h(WidgetContent,props)),
+  h('output',{id:'result'},'Checking title visibility'),
+  h(WidgetEditor,{...props,sources:[]}),
+])}).mount('#app');
+const wait=()=>new Promise(resolve=>setTimeout(resolve,350));
+const row=document.querySelector('.row-check');
+function noHeading(label){
+  if(row.querySelector('h2') || document.querySelector('.widget-preview-panel h2')) throw new Error(label+': unexpected title');
+  const box=row.getBoundingClientRect(), content=row.querySelector('.text-content').getBoundingClientRect();
+  if(content.height<=0 || content.top<box.top || content.bottom>box.bottom+1) throw new Error(label+': content does not fit one row');
+}
+try{
+  await wait(); noHeading('Blank');
+  const title=document.querySelector('.widget-editor input[maxlength="60"]');
+  title.value='Saved title'; title.dispatchEvent(new Event('input',{bubbles:true}));
+  await wait(); if(row.querySelector('h2')?.textContent!=='Saved title')throw new Error('Custom title not shown');
+  const toggle=document.querySelector('.title-toggle input');
+  toggle.click(); await wait(); noHeading('Hidden');
+  if(widget.title!=='Saved title')throw new Error('Hiding title erased it');
+  toggle.click(); await wait(); if(row.querySelector('h2')?.textContent!=='Saved title')throw new Error('Title did not recover');
+  title.value='   '; title.dispatchEvent(new Event('input',{bubbles:true}));
+  await wait(); noHeading('Whitespace');
+  title.value='Saved title'; title.dispatchEvent(new Event('input',{bubbles:true}));
+  await wait(); toggle.click(); await wait(); noHeading('Hidden again');
+  document.querySelector('#result').textContent='PASS: one-row content, blank titles, hidden titles, preview, and toggle recovery';
+}catch(error){document.querySelector('#result').textContent='FAIL: '+error.message;}
+</script></html>

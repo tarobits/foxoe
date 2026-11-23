@@ -42,6 +42,7 @@ watch(() => props.widget.kind, () => { selected.value = ''; });
     <Transition name="notice" mode="out-in">
       <div v-if="tab === 'content'" key="content" class="form-stack">
         <div class="form-row"><label class="grow">{{ t('title') }}<input v-model="target.title" maxlength="60"></label><label>{{ t('kind') }}<select v-model="target.kind"><option v-for="kind in ['clock','value','list','text','icon', ...(!item ? ['layout'] : [])]" :key="kind" :value="kind">{{ t(kind) }}</option></select></label></div>
+        <label class="checkbox-row title-toggle"><input type="checkbox" :checked="target.showTitle !== false" @change="target.showTitle = ($event.target as HTMLInputElement).checked">{{ t('showTitle') }}</label>
         <template v-if="target.kind === 'layout'">
           <label class="checkbox-row"><input v-model="widget.allowOverlap" type="checkbox">{{ t('allowItemOverlap') }}</label>
           <div v-for="axis in (['columns', 'rows'] as const)" :key="axis" class="track-editor">

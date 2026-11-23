@@ -204,6 +204,10 @@ writes. Credentials stay on the service; previews use widget-data redaction,
 
 ### Widget layouts and rules
 
+Widget and item titles are optional. A blank or whitespace-only `title` reserves
+no heading space. `showTitle` defaults to `true`; set it to `false` to hide a
+nonempty title without deleting it. No automatic title is substituted.
+
 Configuration uses `gridVersion: 2`: 24 columns, 48 rows, with zero-based `x`/`y`
 and `w`/`h` spans. Stored version-1 layouts migrate once by doubling coordinates
 and spans, and incrementing the configuration revision. Updates retain their

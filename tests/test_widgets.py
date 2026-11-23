@@ -140,6 +140,32 @@ def comparison(source='system'):
     return {'kind': 'comparison', 'source': source, 'path': 'ready', 'operator': 'eq', 'value': True}
 
 
+def test_title_visibility_defaults_round_trip_and_invalid_save_recovery(tmp_path):
+    assert Widget(id='legacy', title='Existing title').showTitle is True
+    assert WidgetItem(id='legacy').showTitle is True
+    for value in ['false', 0, 1, None, {}]:
+        for model in (Widget, WidgetItem):
+            with pytest.raises(ValidationError):
+                model(id='invalid', showTitle=value)
+    with TestClient(create_app(tmp_path, hardware=False), base_url='http://127.0.0.1:8765') as client:
+        headers = {'origin': 'http://127.0.0.1:8765'}
+        config = client.get('/api/config').json()
+        config['widgets'] = [{'id': 'custom', 'kind': 'layout', 'title': 'Saved title', 'showTitle': False,
+                              'items': [{'id': 'child', 'kind': 'text', 'title': 'Item title', 'showTitle': False}]}]
+        assert client.put('/api/config', json=config, headers=headers).status_code == 200
+        saved = client.get('/api/config').json()
+        stored = Store(tmp_path).load().widgets[0]
+        assert stored.title == 'Saved title' and stored.showTitle is False
+        assert stored.items[0].title == 'Item title' and stored.items[0].showTitle is False
+        invalid = json.loads(json.dumps(saved))
+        invalid['widgets'][0]['items'][0]['showTitle'] = 'false'
+        assert client.put('/api/config', json=invalid, headers=headers).status_code == 422
+        assert client.get('/api/config').json() == saved
+        saved['widgets'][0]['showTitle'] = True
+        assert client.put('/api/config', json=saved, headers=headers).status_code == 200
+        assert Store(tmp_path).load().widgets[0].showTitle is True
+
+
 def combined_condition():
     return {'kind': 'or', 'children': [
         {'kind': 'and', 'children': [comparison(), comparison()]},

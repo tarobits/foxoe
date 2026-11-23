@@ -2,18 +2,18 @@
 import { computed } from 'vue';
 import type { WidgetElement, DataEntry } from './types';
 import Icon from './Icon.vue';
-import { readPath, formatValue, listPage } from './model.js';
+import { readPath, formatValue, listPage, widgetTitle } from './model.js';
 import { t, locale } from './i18n';
 const props = defineProps<{ widget: WidgetElement; entry?: DataEntry; now: Date }>();
 const value = computed(() => readPath(props.entry?.value, props.widget.path));
 const formatted = computed(() => formatValue(value.value, locale.value));
 const page = computed(() => listPage(value.value));
 const rows = computed(() => page.value.rows);
-const heading = computed(() => props.widget.title || (['value', 'list'].includes(props.widget.kind) && props.widget.source === 'system' && props.widget.path ? t(props.widget.path) : ['clock', 'icon'].includes(props.widget.kind) ? '' : t(props.widget.kind)));
+const heading = computed(() => widgetTitle(props.widget));
 </script>
 <template>
   <div class="widget-content" :class="`widget-${widget.kind}`">
-    <h2 v-if="heading">{{ heading }}</h2>
+    <Transition name="notice"><h2 v-if="heading">{{ heading }}</h2></Transition>
     <template v-if="widget.kind === 'clock'">
       <time class="clock-time" :datetime="now.toISOString()">{{ now.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) }}</time>
       <p class="clock-date">{{ now.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' }) }}</p>

@@ -127,7 +127,7 @@ test('composed widgets render live values, escape content, and reveal hidden ite
     const blocked = await renderEditor(full);
     assert.match(blocked, /<button[^>]*disabled[^>]*>[\s\S]*?Add item/);
     const allowed = await renderEditor({...full, allowOverlap:true});
-    assert.match(allowed.match(/<input[^>]*type="checkbox"[^>]*>/)[0], /\bchecked\b/);
+    assert.match(allowed.match(/<label class="checkbox-row"><input[^>]*type="checkbox"[^>]*>/)[0], /\bchecked\b/);
     const addButton = allowed.match(/<button[^>]*>[\s\S]*?Add item<\/button>/)[0];
     assert.ok(!addButton.includes('disabled'));
     const capped = await renderEditor({...full, allowOverlap:true, items:Array.from({length:24}, (_, n) => ({...full.items[0], id:`item-${n}`}))});

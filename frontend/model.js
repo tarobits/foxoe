@@ -30,6 +30,10 @@ export function formatValue(value, locale) {
   return null;
 }
 
+export function widgetTitle(widget) {
+  return widget.showTitle === false ? '' : (widget.title || '').trim();
+}
+
 function compare(rule, data) {
   const entry = data[rule.source];
   if (!entry || entry.error) return false;
