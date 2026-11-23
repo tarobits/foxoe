@@ -3,7 +3,7 @@
   "name": "FoxOE",
   "description": "__MSG_description__",
   "version": "0.1.0",
-  "version_name": "0.1.0-pre1",
+  "version_name": "0.1.0-pre2",
   "minimum_chrome_version": "120",
   "default_locale": "en",
   "permissions": ["storage", "tabs", "scripting", "alarms"],

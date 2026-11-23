@@ -4,7 +4,7 @@ A local kiosk dashboard for a Raspberry Pi 3B+ and 1024×600 touchscreen, with a
 permanent application dock and an Elgato Stream Deck MK.2 that follows the active
 browser application.
 
-**v0.1.0-pre1 is a test version and proof of concept**, intended for experimentation
+**v0.1.0-pre2 is a test version and proof of concept**, intended for experimentation
 rather than production use. Target hardware and live Chromium integration still
 need validation. Install this prerelease with `bash install.sh --channel beta`.
 
@@ -48,7 +48,14 @@ That older project has not been changed.
 
 ## Install and update on Raspberry Pi OS
 
-From a downloaded or cloned FoxOE source folder, run as the kiosk user:
+From a downloaded or cloned FoxOE source folder, an administrator first prepares
+the system for the existing kiosk account (replace `kiosk` with its actual name):
+
+```sh
+sudo bash setup-system.sh --user kiosk
+```
+
+Reboot once, reconnect the Stream Deck, and log in as the kiosk user. Then run:
 
 ```sh
 bash install.sh
@@ -56,8 +63,10 @@ bash install.sh
 
 The installer selects the newest stable semantic version published in
 [GitHub Releases](https://github.com/tarobits/foxoe/releases), builds it, and starts
-a user service. It installs OS dependencies and USB access using `sudo`, and uses
-a private Node.js installation if the available Node version is too old. It
+a user service. Installation and updates never require sudo access for the kiosk
+user. The separate administrator setup installs OS dependencies and configures
+USB access and boot startup. A private Node.js installation is used if the
+available Node version is too old. It
 requires Raspberry Pi OS/Debian with Python 3.11 or newer. An empty repository or
 one without a published release cannot be installed yet.
 
