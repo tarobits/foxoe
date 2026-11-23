@@ -1,0 +1,16 @@
+[Unit]
+Description=Fox Operating Environment
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/FoxOE
+ExecStart=%h/FoxOE/.venv/bin/python -m foxoe
+Restart=on-failure
+RestartSec=3
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target
