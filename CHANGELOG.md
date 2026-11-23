@@ -7,6 +7,21 @@ GitHub release tags use the `v` prefix, for example `v1.0.0`.
 
 ## [Unreleased]
 
+## [0.1.0-preview.10] - 2026-11-23
+
+### Added
+
+- Multiple actions per widget or item condition, combining text, value, and title replacements with colors and visibility. Original content returns when the condition no longer matches.
+- `foxoe deck on`, `off`, and `status` commands. Off sets brightness to zero and ignores keys until explicitly turned on; the setting survives service restarts and USB reconnections.
+
+### Changed
+
+- Prerelease tags now use `preview.10`, `preview.11`, and so on, so beta updates remain correctly ordered after `pre9`.
+
+**Downgrade compatibility:** After saving configuration containing rules with this
+version, restoring an earlier release also requires restoring the pre-update
+database; earlier releases do not recognize the multiple-action field.
+
 ## [0.1.0-pre9] - 2026-11-23
 
 ### Added
@@ -159,7 +174,8 @@ extension session have not yet been validated on the target setup.
 - English and German interfaces.
 - Raspberry Pi OS/Debian installation and updates from published GitHub releases, with remembered stable/beta channels, data preservation, and recovery after a failed activation.
 
-[Unreleased]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre9...main
+[Unreleased]: https://github.com/tarobits/foxoe/compare/v0.1.0-preview.10...main
+[0.1.0-preview.10]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre9...v0.1.0-preview.10
 [0.1.0-pre9]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre8...v0.1.0-pre9
 [0.1.0-pre8]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre7...v0.1.0-pre8
 [0.1.0-pre7]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre6...v0.1.0-pre7

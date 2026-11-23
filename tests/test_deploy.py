@@ -276,6 +276,18 @@ def test_beta_promotes_to_final_and_paginates(monkeypatch):
     assert requests[-1].endswith('page=2')
 
 
+def test_preview_naming_continues_beta_updates_after_pre9(monkeypatch):
+    entries = [release('v0.1.0-pre9'), release('v0.1.0-preview.10'),
+               release('v0.1.0-pre10'), release('v0.1.0-preview.11', draft=True)]
+    mock_github(monkeypatch, [entries])
+    assert deploy.published_release(deploy.REPOSITORY, channel='beta')['tag_name'] == 'v0.1.0-preview.10'
+    assert deploy.newer_release('v0.1.0-pre9', 'v0.1.0-preview.10')
+    assert deploy.newer_release('v0.1.0-preview.10', 'v0.1.0-preview.11')
+    assert deploy.newer_release('v0.1.0-preview.11', 'v0.1.0')
+    with pytest.raises(deploy.DeploymentError, match='downgrade'):
+        deploy.newer_release('v0.1.0-pre9', 'v0.1.0-pre10')
+
+
 @pytest.mark.parametrize('tag', ['1.0.0', 'v01.0.0', 'v1.0', 'v1.0.0-beta.01', 'v1.0.0-', 'v1.0.0;evil', None])
 def test_invalid_semver_tags_rejected(tag):
     with pytest.raises(deploy.DeploymentError):
