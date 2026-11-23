@@ -4,9 +4,8 @@ A local kiosk dashboard for a Raspberry Pi 3B+ and 1024×600 touchscreen, with a
 permanent application dock and an Elgato Stream Deck MK.2 that follows the active
 browser application.
 
-**v0.1.0-pre4 is a test version and proof of concept**, intended for experimentation
-rather than production use. Target hardware and live Chromium integration still
-need validation. Install this prerelease with `bash install.sh --channel beta`.
+FoxOE is currently available as a prerelease. Install it with
+`bash install.sh --channel beta`.
 
 ## What is implemented
 
@@ -137,8 +136,9 @@ To configure from another computer, enable the password-protected
 Use **Edit dashboard** to add, move, resize, and configure widgets. Changes become
 persistent only when saved; Cancel discards the draft. The grid has 24 columns,
 48 rows at 48px each, and rejects overlaps. Existing layouts migrate to the finer
-grid automatically. On narrow screens widgets stack; position and size
-remain editable through fields.
+grid automatically. The whole widget area, including its contents, scales down
+to fit above the app dock without scrolling. Narrow screens retain the grid
+layout; position and size remain editable through fields.
 
 Choose **Custom layout** to combine text, values, lists, clocks, and icons in one
 widget. Adjust row/column proportions and each item's position and spans.
@@ -147,7 +147,10 @@ items; later items appear above earlier ones. Dashboard widgets still cannot
 overlap. Icons shrink to fit their cells when rows or columns become smaller.
 **Appearance** controls text, icon, and background colors, text size, alignment,
 padding, and item spacing. **Rules** compare live data fields with typed values to
-change colors or visibility, for the whole widget or individual items. Matching
+change colors or visibility, for the whole widget or individual items. Use
+**Combine** to nest AND/OR groups, and **NOT** to invert a condition or group.
+For example, an OR group can contain an AND group and a negated condition:
+`(condition1 AND condition2) OR NOT condition3`. Matching
 rules apply in order; the last matching change to a property wins. Failed or
 unavailable sources do not trigger rules. Hidden widgets keep their grid space
 and remain visible while editing.
