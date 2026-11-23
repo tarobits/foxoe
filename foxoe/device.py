@@ -2,6 +2,7 @@
 import asyncio
 import threading
 import io
+import re
 from functools import lru_cache
 from pathlib import Path
 
@@ -48,42 +49,50 @@ def key_image(label: str, disabled: bool, home: bool, png: bytes | None = None, 
         image.paste(symbol, ((72 - symbol_size) // 2, 4), symbol)
         text_top = symbol_size + 7
     draw = ImageDraw.Draw(image)
-    try:
-        font = ImageFont.truetype("DejaVuSans.ttf", text_size)
-    except OSError:
-        font = ImageFont.load_default(size=text_size)
-    # Wrap by measured width, including unbroken names, without fetching assets.
-    lines: list[str] = []
-    line = ""
-    for char in label[:60]:
-        if char == '\n':
-            lines.append(line)
+    # The configured size is a ceiling. Try word wrapping at each size before
+    # shortening anything; split unbroken words only when they exceed a line.
+    for size in range(text_size, 7, -1):
+        try:
+            font = ImageFont.truetype('DejaVuSans.ttf', size)
+        except OSError:
+            font = ImageFont.load_default(size=size)
+        lines = []
+        for paragraph in label[:60].split('\n'):
             line = ''
-        elif line and draw.textlength(line + char, font=font) > 62:
+            for word in re.findall(r'\S+', paragraph):
+                candidate = f'{line} {word}' if line else word
+                if line and draw.textlength(candidate, font=font) > 62:
+                    lines.append(line)
+                    line = ''
+                elif line:
+                    line = candidate
+                    continue
+                for char in word:
+                    if line and draw.textlength(line + char, font=font) > 62:
+                        lines.append(line)
+                        line = ''
+                    line += char
             lines.append(line)
-            line = char
-        else:
-            line += char
-    lines.append(line)
-    line_height = text_size + 2
-    limit = max(1, (68 - text_top) // line_height)
-    if len(lines) > limit:
-        lines = lines[:limit]
-        while lines[-1] and draw.textlength(lines[-1] + '…', font=font) > 62:
-            lines[-1] = lines[-1][:-1]
-        lines[-1] += '…'
-    # Compose in a bounded region: large glyphs and unusual Unicode cannot
-    # overlap the icon or escape the key. Keep the selected size, not auto-shrink.
-    text_layer = Image.new('RGBA', (64, 68 - text_top))
+        line_height = max(size + 2, *(font.getbbox(line or ' ', anchor='lt')[3] + 2 for line in lines))
+        limit = max(1, (68 - text_top) // line_height)
+        if len(lines) <= limit:
+            break
+    # Preserve every line even when 8px does not fit: render the full block,
+    # then scale it into the available area instead of adding an ellipsis.
+    available_height = 68 - text_top
+    text_layer = Image.new('RGBA', (64, max(available_height, len(lines) * line_height)))
     text_draw = ImageDraw.Draw(text_layer)
     ink = text_color or '#ffffff'
     if disabled:
         ink = tuple(int(channel * .45) for channel in ImageColor.getrgb(text_color)) if text_color else '#9ca3af'
     for index, text in enumerate(lines):
-        y = text_layer.height / 2 + (index - (len(lines) - 1) / 2) * line_height
-        text_draw.text((32, y), text,
-                  font=font, fill=ink, anchor="mm")
-    image.paste(text_layer, (4, text_top), text_layer)
+        height = font.getbbox(text or ' ', anchor='lt')[3]
+        y = (text_layer.height - len(lines) * line_height) / 2 + index * line_height + (line_height - height) / 2
+        text_draw.text((32, y), text, font=font, fill=ink, anchor='mt')
+    if text_layer.height > available_height:
+        width = max(1, round(text_layer.width * available_height / text_layer.height))
+        text_layer = text_layer.resize((width, available_height), Image.Resampling.LANCZOS)
+    image.paste(text_layer, ((72 - text_layer.width) // 2, text_top), text_layer)
     return image
 
 

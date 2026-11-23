@@ -155,3 +155,26 @@ def test_key_colors_tint_without_mutating_cached_icons_or_uploaded_artwork():
     custom = key_image('A', False, False, png.getvalue(), icon_color='#ff0000', background_color='#00ff00')
     assert custom.getpixel((36, 36)) == (10, 20, 30)
     assert custom.getpixel((0, 0)) == (0, 255, 0)
+
+
+def test_long_app_name_shrinks_before_truncating_and_short_label_keeps_size(monkeypatch):
+    from PIL import ImageDraw
+    drawn = []
+    original = ImageDraw.ImageDraw.text
+    def record(self, xy, text, *args, **kwargs):
+        drawn.append((text, kwargs['font'].size))
+        return original(self, xy, text, *args, **kwargs)
+    monkeypatch.setattr(ImageDraw.ImageDraw, 'text', record)
+    key_image.cache_clear()
+    key_image('Label Station', False, False, icon='printer', text_size=32)
+    assert ''.join(text for text, _ in drawn).replace(' ', '') == 'LabelStation'
+    assert all(8 <= size < 32 for _, size in drawn)
+    drawn.clear()
+    key_image('42', False, False, icon=None, text_size=32)
+    assert drawn == [('42', 32)]
+    for label in ('W' * 60, '\n'.join(['Ä'] * 30), 'A very long application name that must remain complete'):
+        drawn.clear()
+        rendered = key_image(label, False, False, icon='printer', text_size=32)
+        assert ''.join(text for text, _ in drawn).replace(' ', '') == label.replace(' ', '').replace('\n', '')
+        assert rendered.size == (72, 72)
+        assert all('…' not in text for text, _ in drawn)
