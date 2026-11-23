@@ -78,3 +78,27 @@ def test_regular_page_cannot_open_bridge(api):
     with pytest.raises(WebSocketDisconnect):
         with client.websocket_connect("ws://127.0.0.1:8765/bridge", headers={"origin": ORIGIN}):
             pass
+
+
+def test_dashboard_saves_text_only_launchers_and_rejects_bad_sizes(api):
+    client, _ = api
+    config = client.get('/api/config').json()
+    config['apps'][0].update(icon=None, textSize=32)
+    saved = client.put('/api/config', json=config, headers={'origin': ORIGIN})
+    assert saved.status_code == 200
+    current = client.get('/api/config').json()
+    assert current['apps'][0]['icon'] is None
+    assert current['apps'][0]['textSize'] == 32
+    config = saved.json()
+    config['apps'][0]['textSize'] = 0
+    assert client.put('/api/config', json=config, headers={'origin': ORIGIN}).status_code == 422
+    assert client.get('/api/config').json() == current
+
+
+def test_generated_sprite_served_as_svg_without_path_traversal(api):
+    client, _ = api
+    response = client.get('/heroicons.svg')
+    assert response.status_code == 200
+    assert response.headers['content-type'].startswith('image/svg+xml')
+    assert '<symbol id="user"' in response.text
+    assert client.get('/icon_catalog.json').status_code == 404

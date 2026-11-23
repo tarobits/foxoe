@@ -44,6 +44,36 @@ The API accepts at most two concurrent authenticated registration requests, a
 2 MiB request body, 14 apps, 16 screens per app, and 14 configurable keys per screen.
 Key 15 is always FoxOE Home. Buttons use row-major order on the 5×3 MK.2.
 
+### Icons and text size
+
+Applications and buttons accept `icon: null` for no built-in symbol and
+`textSize` for the Stream Deck label size in pixels (integer **8–32**, default
+**14**). Omitting `icon` preserves the default `window` icon. A `null` button
+still means an empty, inactive slot; a button with `icon: null` remains clickable.
+
+```js
+await deck.show({ id: 'count', buttons: [
+  { id: 'quantity', label: '42', icon: null, textSize: 32 },
+  { id: 'profile', label: 'Profile', icon: 'user', textSize: 14 },
+] });
+await deck.updateButton('quantity', { textSize: 24, icon: null, image: null });
+```
+
+The same fields on the registration manifest configure its app launcher key.
+Text size affects the physical keys and their preview, not touchscreen app labels.
+Text wraps within the key and is truncated with an ellipsis when necessary.
+Large text reduces the space available for its symbol. The reserved Home key
+keeps its house icon and default size.
+
+Every Heroicons 24px outline icon is supported, including `user`, `users`,
+`user-circle`, `folder`, `lock-closed`, `power`, and `academic-cap`.
+Use the exact identifiers from [the icon catalog](../foxoe/icon_catalog.json),
+also searchable in dashboard settings. Catalog keys are API identifiers;
+values are upstream Heroicons component names. Existing aliases (`keypad`,
+`close`, `back`, `reload`, `settings`, `edit`, `remove`, `resize`, `move`, `system`)
+remain supported, along with the `foxoe` brand mark. Unknown names and empty
+strings are rejected; use JSON `null` to hide the icon.
+
 ### Images
 
 Applications can register custom launcher and button icons in the same request.
@@ -63,8 +93,9 @@ manifest.screens = [{
 ```
 
 Custom artwork fills the physical key. Without an `image`, FoxOE draws the
-selected built-in `icon` above its label. Built-in names are `window`, `printer`,
-`home`, `keypad`, `play`, `backspace`, `check`, `close`, `back`, `reload`, and `foxoe`.
+selected built-in `icon` above its label, or centers the text when `icon` is null.
+An uploaded `image` takes precedence over `icon` and `textSize`; clear `image`
+as well for a text-only key.
 The reserved Home key always uses a house icon. Custom assets remain scoped to
 the registering app and can be replaced using its update credential.
 
@@ -112,13 +143,10 @@ deck.dispose();
 
 Catch rejected promises when pages disconnect. A page can also call
 `show({id, buttons})`, `push({id, buttons})`, `pushScreen(id)`, and
-`updateButton(id, {label, icon, image, disabled})`. `show` replaces the layout
+`updateButton(id, {label, icon, image, disabled, textSize})`. `show` replaces the layout
 stack; `push` adds a temporary screen; `pop` restores the previous one. At most
 eight layouts may be stacked. App-supplied labels should use that app's locale.
 Image names must belong to the registered app.
-
-Available built-in icon names: `window`, `printer`, `home`, `keypad`, `play`,
-`backspace`, `check`, `close`, `back`, and `reload`.
 
 The extension accepts messages only from the selected kiosk tab's top-level
 current document. URL scopes match the configured origin and path segment:

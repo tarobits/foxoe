@@ -3,6 +3,7 @@ import { ref } from 'vue';
 export const locale = ref<'en' | 'de'>('en');
 export const messages: Record<'en' | 'de', Record<string, string>> = {
   en: {
+    noIcon: 'No icon', searchIcons: 'Search icons', noIconsFound: 'No matching icons', keyTextSize: 'Key text size (px)',
     registration: 'App registration', showRegistrationToken: 'Show setup credential', registrationHelp: 'Give this credential only to trusted application servers. It allows new apps to join FoxOE. Network registration requires the separate HTTPS listener.',
     home: 'Home', settings: 'Settings', editDashboard: 'Edit dashboard', done: 'Done', save: 'Save', cancel: 'Cancel', close: 'Close', back: 'Back',
     addWidget: 'Add widget', editWidget: 'Edit widget', deleteWidget: 'Remove widget', moveWidget: 'Move widget', resizeWidget: 'Resize widget',
@@ -27,6 +28,7 @@ export const messages: Record<'en' | 'de', Record<string, string>> = {
     defaultApp: 'New application', defaultSource: 'New data source', widget: 'Widget', documentTitle: 'FoxOE', printer: 'Printer',
   },
   de: {
+    noIcon: 'Kein Symbol', searchIcons: 'Symbole suchen', noIconsFound: 'Keine passenden Symbole', keyTextSize: 'Tastenschriftgröße (px)',
     registration: 'App-Registrierung', showRegistrationToken: 'Einrichtungsschlüssel anzeigen', registrationHelp: 'Gib diesen Schlüssel nur an vertrauenswürdige Anwendungsserver weiter. Er erlaubt neuen Apps, sich bei FoxOE zu registrieren. Die Registrierung über das Netzwerk erfordert den separaten HTTPS-Dienst.',
     home: 'Start', settings: 'Einstellungen', editDashboard: 'Dashboard bearbeiten', done: 'Fertig', save: 'Speichern', cancel: 'Abbrechen', close: 'Schließen', back: 'Zurück',
     addWidget: 'Widget hinzufügen', editWidget: 'Widget bearbeiten', deleteWidget: 'Widget entfernen', moveWidget: 'Widget verschieben', resizeWidget: 'Widget skalieren',

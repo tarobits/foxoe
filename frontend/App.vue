@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import Icon from './Icon.vue';
+import IconPicker from './IconPicker.vue';
 import WidgetContent from './WidgetContent.vue';
 import Demo from './Demo.vue';
 import { t, locale } from './i18n';
@@ -92,7 +93,7 @@ async function save() {
 }
 function addApp() {
   if (!draft.value || draft.value.apps.length >= 14) return;
-  draft.value.apps.push({ id: id('app'), name: t('defaultApp'), url: '', icon: 'window' });
+  draft.value.apps.push({ id: id('app'), name: t('defaultApp'), url: '', icon: 'window', textSize: 14 });
 }
 function addSource() {
   if (!draft.value || draft.value.sources.length >= 12) return;
@@ -213,11 +214,13 @@ onUnmounted(() => { abort.abort(); clearTimeout(pollTimer); clearInterval(clockT
           <section v-if="settingsTab === 'applications'" key="apps" class="settings-section">
             <div class="section-header"><h2>{{ t('applications') }}</h2><button class="secondary" :disabled="draft.apps.length >= 14" @click="addApp"><Icon name="plus" />{{ t('addApp') }}</button></div>
             <p v-if="draft.apps.length >= 14" class="muted">{{ t('appLimit') }}</p>
-            <div v-for="app in draft.apps" :key="app.id" class="app-form form-row">
+            <div v-for="app in draft.apps" :key="app.id" class="app-form">
+              <div class="form-row">
               <label>{{ t('name') }}<input v-model="app.name" maxlength="60" required></label>
               <label class="grow">{{ t('url') }}<input v-model="app.url" type="text" spellcheck="false" required></label>
-              <label>{{ t('icon') }}<select v-model="app.icon"><option v-for="icon in ['window','printer','keypad','home','foxoe']" :key="icon" :value="icon">{{ icon === 'foxoe' ? 'FoxOE' : t(icon === 'window' ? 'applications' : icon === 'printer' ? 'printer' : icon === 'keypad' ? 'demo' : icon) }}</option></select></label>
               <button class="icon-button danger-text" :aria-label="t('remove') + ' ' + app.name" @click="draft.apps = draft.apps.filter(item => item.id !== app.id)"><Icon name="remove" /></button>
+              </div>
+              <div class="form-row app-key-style"><IconPicker v-model="app.icon" /><label>{{ t('keyTextSize') }}<input v-model.number="app.textSize" type="number" min="8" max="32" step="1" required></label></div>
             </div>
             <p v-if="!draft.apps.length" class="muted">{{ t('noApps') }}</p>
           </section>
@@ -235,13 +238,13 @@ onUnmounted(() => { abort.abort(); clearTimeout(pollTimer); clearInterval(clockT
             <label>{{ t('brightness') }}<div class="range-row"><input v-model.number="draft.brightness" type="range" min="0" max="100"><output>{{ draft.brightness }}%</output></div></label>
             <section class="connection-section"><h2>{{ t('pairing') }}</h2><dl class="connection-details"><div><dt>{{ t('browser') }}</dt><dd>{{ t(state?.connected ? 'connected' : 'disconnected') }}</dd></div><div><dt>{{ t('device') }}</dt><dd>{{ t(state?.device || 'disconnected') }}</dd></div></dl><button class="secondary" @click="showToken">{{ t(token ? 'hideToken' : 'showToken') }}</button><Transition name="notice"><div v-if="token" class="pairing-token"><p class="muted">{{ t('tokenHelp') }}</p><input :value="token" readonly :aria-label="t('pairing')" autocomplete="off" @focus="($event.target as HTMLInputElement).select()"></div></Transition></section>
             <section><h2>{{ t('registration') }}</h2><p class="muted help">{{ t('registrationHelp') }}</p><button class="secondary" @click="showRegistrationToken">{{ t(registrationToken ? 'hideToken' : 'showRegistrationToken') }}</button><Transition name="notice"><div v-if="registrationToken" class="pairing-token"><input :value="registrationToken" readonly :aria-label="t('registration')" autocomplete="off" @focus="($event.target as HTMLInputElement).select()"></div></Transition></section>
-            <section><h2>{{ t('preview') }}</h2><div class="deck-preview"><div v-for="(button, index) in state?.buttons" :key="index" class="deck-key" :class="{ disabled: button?.disabled, 'home-key': index === 14 }"><img v-if="button?.image" :src="`/api/images/${button.image}`" alt=""><Icon v-else-if="button" :name="button.icon" /><span>{{ button?.label }}</span></div></div></section>
+            <section><h2>{{ t('preview') }}</h2><div class="deck-preview"><div v-for="(button, index) in state?.buttons" :key="index" class="deck-key" :class="{ disabled: button?.disabled, 'home-key': index === 14 }"><img v-if="button?.image" :src="`/api/images/${button.image}`" alt=""><Icon v-else-if="button" :name="button.icon" /><span :style="{ fontSize: `${button?.textSize ?? 14}px` }">{{ button?.label }}</span></div></div></section>
           </section>
         </Transition>
       </main>
     </Transition>
     <Transition name="notice"><footer v-if="screen === 'home'" class="app-dock">
-      <nav class="dock-apps" :aria-label="t('applications')"><a v-for="app in config.apps" :key="app.id" :href="app.url" class="dock-app" :aria-disabled="editing" @click="editing && $event.preventDefault()"><span class="app-symbol"><img v-if="app.image && app.images?.[app.image]" :src="`/api/images/${app.images[app.image]}`" alt=""><Icon v-else :name="app.icon" /></span><span>{{ app.name }}</span></a><button v-if="!editing" class="dock-add" :aria-label="t('addApp')" @click="openSettings(); addApp()"><Icon name="plus" /></button></nav>
+      <nav class="dock-apps" :aria-label="t('applications')"><a v-for="app in config.apps" :key="app.id" :href="app.url" class="dock-app" :class="{ 'text-only': !app.icon && !(app.image && app.images?.[app.image]) }" :aria-disabled="editing" @click="editing && $event.preventDefault()"><span v-if="app.icon || (app.image && app.images?.[app.image])" class="app-symbol"><img v-if="app.image && app.images?.[app.image]" :src="`/api/images/${app.images[app.image]}`" alt=""><Icon v-else :name="app.icon" /></span><span>{{ app.name }}</span></a><button v-if="!editing" class="dock-add" :aria-label="t('addApp')" @click="openSettings(); addApp()"><Icon name="plus" /></button></nav>
       <div class="dock-status"><span>{{ t('device') }}</span><span :class="{ success: state?.device === 'connected' }">{{ t(state?.device || 'disconnected') }}</span></div>
     </footer></Transition>
     <dialog ref="dialog" class="widget-dialog" aria-labelledby="widget-dialog-title" :class="{ closing: closingDialog }" @cancel.prevent="closeWidget">
