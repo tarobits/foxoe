@@ -2,6 +2,10 @@ import { HOME, allowedApp, validSender } from './protocol.js';
 
 let socket;
 let heartbeat;
+let connecting;
+let connectionAttempt = 0;
+let authenticated = false;
+let contextRetry;
 let tabId;
 let documentId;
 let generation = -1;
@@ -24,11 +28,12 @@ const send = message => {
   return true;
 };
 const post = async message => {
-  if (tabId == null || !documentId) return;
-  try { await chrome.tabs.sendMessage(tabId, message, { documentId }); } catch { /* A navigation can remove the document between checks. */ }
+  if (tabId == null || !documentId) return false;
+  try { await chrome.tabs.sendMessage(tabId, message, { documentId }); return true; } catch { return false; }
 };
 
 function invalidate() {
+  clearTimeout(contextRetry);
   contextSequence++;
   void post({ type: 'connection', connected: false });
   documentId = undefined;
@@ -38,59 +43,98 @@ function invalidate() {
   requests.clear();
 }
 
+function retryContext(sequence) {
+  clearTimeout(contextRetry);
+  const current = socket;
+  contextRetry = setTimeout(() => {
+    if (sequence === contextSequence && socket === current && authenticated) void refreshContext();
+  }, 1000);
+}
+
 async function refreshContext() {
   invalidate();
   const sequence = contextSequence;
-  if (tabId == null || socket?.readyState !== WebSocket.OPEN) return;
+  if (tabId == null || socket?.readyState !== WebSocket.OPEN || !authenticated) return;
   try {
     const tab = await chrome.tabs.get(tabId);
     const win = await chrome.windows.get(tab.windowId);
-    if (!tab.active || !win.focused || sequence !== contextSequence || tab.status === 'loading') return;
+    if (!tab.active || !win.focused || sequence !== contextSequence) return;
+    if (!/^https?:\/\//.test(tab.url || '')) return;
+    if (tab.status === 'loading') { retryContext(sequence); return; }
     const frames = await chrome.scripting.executeScript({ target: { tabId, frameIds: [0] }, func: () => location.href });
     const frame = frames[0];
-    if (!frame?.documentId || sequence !== contextSequence) return;
+    if (sequence !== contextSequence) return;
+    if (!frame?.documentId) { retryContext(sequence); return; }
     documentId = frame.documentId;
     const request = crypto.randomUUID();
     requests.set(request, { document: documentId, reply: response => {
-      if (response.type !== 'ack') return;
-      void chrome.scripting.executeScript({ target: { tabId, documentIds: [documentId] }, files: ['content.js'] }).then(() => {
-        if (sequence === contextSequence) void post({ type: 'connection', connected: Boolean(allowedApp(tab.url, config.apps)), locale: config.locale });
-      }).catch(() => {});
+      if (response.type !== 'ack' || sequence !== contextSequence) return;
+      void chrome.scripting.executeScript({ target: { tabId, documentIds: [documentId] }, files: ['content.js'] }).then(async () => {
+        if (sequence !== contextSequence) return;
+        const delivered = await post({ type: 'connection', connected: Boolean(allowedApp(tab.url, config.apps)), locale: config.locale });
+        if (sequence === contextSequence && delivered) clearTimeout(contextRetry);
+      }).catch(() => { /* The scheduled retry handles documents not ready yet. */ });
     } });
     send({ type: 'context', url: frame.result, document: documentId, request });
-  } catch { /* No host permission, closed tab, or browser page: controls stay inactive. */ }
+    retryContext(sequence);
+  } catch {
+    if (sequence === contextSequence) retryContext(sequence);
+  }
 }
 
-async function connect() {
+function connect() {
+  if (connecting) return connecting;
   if (socket && [WebSocket.CONNECTING, WebSocket.OPEN].includes(socket.readyState)) return;
+  const attempt = connectionAttempt;
+  const task = openSocket(attempt).catch(() => {
+    if (attempt === connectionAttempt) void chrome.alarms.create('reconnect', { delayInMinutes: 0.5 });
+  }).finally(() => { if (connecting === task) connecting = undefined; });
+  connecting = task;
+  return task;
+}
+
+async function openSocket(attempt) {
   const stored = await chrome.storage.local.get(['token']);
   if (!stored.token) return;
-  tabId = (await chrome.storage.session.get('kioskTab')).kioskTab;
+  if (tabId == null) {
+    const saved = await chrome.storage.session.get('kioskTab');
+    if (tabId == null) tabId = saved.kioskTab;
+  }
+  if (attempt !== connectionAttempt) return;
   await selectHomeTab();
+  if (attempt !== connectionAttempt) return;
   const current = new WebSocket('ws://127.0.0.1:8765/bridge');
   socket = current;
+  authenticated = false;
   current.onopen = () => {
+    if (socket !== current) { current.close(); return; }
     current.send(JSON.stringify({ token: stored.token }));
     heartbeat = setInterval(() => send({ type: 'ping' }), 20000);
   };
   current.onclose = () => {
     if (socket !== current) return;
     clearInterval(heartbeat);
+    authenticated = false;
     invalidate();
     socket = undefined;
     void chrome.alarms.create('reconnect', { delayInMinutes: 0.5 });
   };
   current.onmessage = async event => {
+    if (socket !== current) return;
     const message = JSON.parse(event.data);
     if (message.type === 'configuration') {
+      authenticated = true;
       config = message.config;
       await chrome.storage.local.set({ config });
+      if (socket !== current) return;
       await refreshContext();
     } else if (message.type === 'ack' || message.type === 'error') {
-      if (message.generation != null) generation = message.generation;
       const request = requests.get(message.request);
       requests.delete(message.request);
-      if (request && request.document === documentId) request.reply(message);
+      if (request && request.document === documentId) {
+        if (message.generation != null) generation = message.generation;
+        request.reply(message);
+      }
     } else if (['launch', 'browser', 'action'].includes(message.type)) {
       const tab = await chrome.tabs.get(tabId).catch(() => null);
       const win = tab ? await chrome.windows.get(tab.windowId).catch(() => null) : null;
@@ -109,10 +153,14 @@ async function connect() {
 
 chrome.runtime.onMessage.addListener((message, sender, reply) => {
   if (message?.type === 'reconnect' && sender.url === chrome.runtime.getURL('options.html')) {
-    socket?.close();
-    socket = undefined;
-    clearInterval(heartbeat);
+    const previous = socket;
     invalidate();
+    socket = undefined;
+    authenticated = false;
+    connectionAttempt++;
+    connecting = undefined;
+    clearInterval(heartbeat);
+    previous?.close();
     void connect();
     reply({ ok: true });
     return;
