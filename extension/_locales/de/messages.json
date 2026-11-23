@@ -1,0 +1,13 @@
+{
+  "description": {"message": "Verbindet die aktive Kiosk-Anwendung mit FoxOE und dem Stream Deck."},
+  "connectTab": {"message": "Diesen Tab als FoxOE-Kiosk verwenden"},
+  "home": {"message": "Start"},
+  "setupHelp": {"message": "Verwende diese Erweiterung im eigenen Kiosk-Browserprofil. Kopiere den Verbindungsschlüssel aus den FoxOE-Einstellungen, öffne das Dashboard und wähle den Kiosk-Tab über das FoxOE-Symbol in der Symbolleiste aus."},
+  "connectionToken": {"message": "Verbindungsschlüssel"},
+  "saveConnection": {"message": "Verbindung speichern"},
+  "applications": {"message": "Anwendungen"},
+  "grantApps": {"message": "Zugriff auf konfigurierte Apps erlauben"},
+  "connectionSaved": {"message": "Verbindung gespeichert. Öffne das Dashboard und klicke auf das FoxOE-Symbol in der Symbolleiste."},
+  "accessGranted": {"message": "App-Zugriff erlaubt."},
+  "accessDenied": {"message": "App-Zugriff wurde nicht erlaubt."}
+}

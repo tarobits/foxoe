@@ -1,0 +1,13 @@
+{
+  "description": {"message": "Connect the active kiosk application to FoxOE and its Stream Deck."},
+  "connectTab": {"message": "Use this tab as the FoxOE kiosk"},
+  "home": {"message": "Home"},
+  "setupHelp": {"message": "Use this extension in the dedicated kiosk browser profile. Copy the connection token from FoxOE Settings, then open the dashboard and click the FoxOE toolbar icon to select the kiosk tab."},
+  "connectionToken": {"message": "Connection token"},
+  "saveConnection": {"message": "Save connection"},
+  "applications": {"message": "Applications"},
+  "grantApps": {"message": "Allow access to configured apps"},
+  "connectionSaved": {"message": "Connection saved. Open the dashboard and click the FoxOE toolbar icon."},
+  "accessGranted": {"message": "App access allowed."},
+  "accessDenied": {"message": "App access was not allowed."}
+}

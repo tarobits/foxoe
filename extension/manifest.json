@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "FoxOE",
+  "description": "__MSG_description__",
+  "version": "0.1.0",
+  "version_name": "0.1.0-pre1",
+  "minimum_chrome_version": "120",
+  "default_locale": "en",
+  "permissions": ["storage", "tabs", "scripting", "alarms"],
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "background": {"service_worker": "background.js", "type": "module"},
+  "action": {"default_title": "__MSG_connectTab__"},
+  "options_page": "options.html",
+  "content_security_policy": {"extension_pages": "script-src 'self'; object-src 'self'; connect-src http://127.0.0.1:8765 ws://127.0.0.1:8765"}
+}
