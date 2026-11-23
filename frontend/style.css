@@ -161,8 +161,8 @@ textarea { resize: vertical; }
 .widget-body { height: 100%; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
 .widget-layout { display: grid; flex: 1; min-height: 0; }
 .widget-cell { min-width: 0; min-height: 0; overflow: auto; }
-.widget-icon { display: flex; justify-content: var(--widget-justify, flex-start); align-items: center; flex: 1; }
-.widget-icon .icon { width: var(--widget-font-size, 40px); height: var(--widget-font-size, 40px); color: var(--widget-icon-color, currentColor); }
+.widget-icon-frame { position: relative; flex: 1 1 0; min-width: 0; min-height: 0; }
+.widget-icon-frame .icon { position: absolute; inset: 0; margin-block: auto; margin-inline: var(--widget-icon-margin, 0 auto); width: var(--widget-font-size, 40px); height: var(--widget-font-size, 40px); max-width: 100%; max-height: 100%; object-fit: contain; color: var(--widget-icon-color, currentColor); }
 .layout-heading { margin-bottom: 12px; color: var(--widget-text-color, var(--text-secondary)); }
 .rule-hidden { opacity: .45; }
 .editor-tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--line); padding-bottom: 8px; flex-wrap: wrap; }

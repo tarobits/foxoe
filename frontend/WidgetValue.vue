@@ -19,7 +19,7 @@ const heading = computed(() => props.widget.title || (['value', 'list'].includes
       <p class="clock-date">{{ now.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' }) }}</p>
     </template>
     <p v-else-if="widget.kind === 'text'" class="text-content">{{ widget.text }}</p>
-    <div v-else-if="widget.kind === 'icon'" class="widget-icon"><Icon :name="widget.icon ?? null" /></div>
+    <div v-else-if="widget.kind === 'icon'" class="widget-icon-frame"><Icon :name="widget.icon ?? null" /></div>
     <template v-else>
       <p v-if="entry?.error" class="data-warning" role="status">{{ t('stale') }}<span v-if="entry.updatedAt"> · {{ t('lastUpdated') }} {{ new Date(entry.updatedAt * 1000).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) }}</span></p>
       <p v-if="!entry" class="muted">{{ t('waiting') }}</p>

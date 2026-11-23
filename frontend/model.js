@@ -64,7 +64,8 @@ export function contentStyle(item, data) {
   return { color: colors.textColor || undefined, backgroundColor: colors.backgroundColor || undefined,
     '--widget-text-color': colors.textColor || undefined, '--widget-icon-color': colors.iconColor || undefined,
     '--widget-font-size': item.fontSize ? `${item.fontSize}px` : undefined, textAlign: item.align || 'left',
-    '--widget-justify': item.align === 'center' ? 'center' : item.align === 'right' ? 'flex-end' : 'flex-start' };
+    '--widget-justify': item.align === 'center' ? 'center' : item.align === 'right' ? 'flex-end' : 'flex-start',
+    '--widget-icon-margin': item.align === 'center' ? 'auto' : item.align === 'right' ? 'auto 0' : '0 auto' };
 }
 
 export function itemFits(item, widget) {
