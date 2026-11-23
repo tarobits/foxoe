@@ -1,4 +1,4 @@
-export type IconName = 'window' | 'printer' | 'home' | 'keypad' | 'play' | 'backspace' | 'check' | 'close' | 'back' | 'reload';
+export type IconName = 'window' | 'printer' | 'home' | 'keypad' | 'play' | 'backspace' | 'check' | 'close' | 'back' | 'reload' | 'foxoe';
 export interface Application { id: string; name: string; url: string; icon: IconName; image?: string | null; images?: Record<string, string>; screens?: unknown[] }
 export interface Source { id: string; name: string; url: string; interval: number; authEnv: string }
 export interface Widget { id: string; kind: 'clock' | 'text' | 'value' | 'list'; title: string; text: string; source: string; path: string; itemPath: string; unit: string; x: number; y: number; w: number; h: number }

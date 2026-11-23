@@ -3,13 +3,14 @@
   "name": "FoxOE",
   "description": "__MSG_description__",
   "version": "0.1.0",
-  "version_name": "0.1.0-pre2",
+  "version_name": "0.1.0-pre3",
   "minimum_chrome_version": "120",
   "default_locale": "en",
+  "icons": {"16": "icons/foxoe-16.png", "32": "icons/foxoe-32.png", "48": "icons/foxoe-48.png", "128": "icons/foxoe-128.png"},
   "permissions": ["storage", "tabs", "scripting", "alarms"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "background": {"service_worker": "background.js", "type": "module"},
-  "action": {"default_title": "__MSG_connectTab__"},
+  "action": {"default_title": "__MSG_connectTab__", "default_icon": {"16": "icons/foxoe-16.png", "32": "icons/foxoe-32.png"}},
   "options_page": "options.html",
   "content_security_policy": {"extension_pages": "script-src 'self'; object-src 'self'; connect-src http://127.0.0.1:8765 ws://127.0.0.1:8765"}
 }

@@ -185,7 +185,7 @@ onUnmounted(() => { abort.abort(); clearTimeout(pollTimer); clearInterval(clockT
   <div v-else-if="!config" class="loading-screen"><h1>FoxOE</h1><p :role="error ? 'alert' : 'status'">{{ error || t('loading') }}</p><button v-if="error" class="secondary" @click="load">{{ t('retry') }}</button></div>
   <div v-else class="shell">
     <header class="shell-header">
-      <div class="brand"><Icon name="keypad" /><h1>{{ screen === 'settings' ? t('settings') : active?.title }}</h1></div>
+      <div class="brand"><img class="brand-mark" src="/foxoe.svg" alt=""><h1>{{ screen === 'settings' ? t('settings') : active?.title }}</h1></div>
       <div class="header-actions">
         <template v-if="editing || screen === 'settings'"><button class="secondary" :disabled="saving" @click="cancel">{{ t('cancel') }}</button><button class="primary" :disabled="saving" @click="save"><Icon name="check" />{{ t('save') }}</button></template>
         <template v-else><button class="icon-button" :aria-label="t('editDashboard')" @click="beginEdit"><Icon name="edit" /></button><button class="icon-button" :aria-label="t('settings')" @click="openSettings()"><Icon name="settings" /></button></template>
@@ -216,7 +216,7 @@ onUnmounted(() => { abort.abort(); clearTimeout(pollTimer); clearInterval(clockT
             <div v-for="app in draft.apps" :key="app.id" class="app-form form-row">
               <label>{{ t('name') }}<input v-model="app.name" maxlength="60" required></label>
               <label class="grow">{{ t('url') }}<input v-model="app.url" type="text" spellcheck="false" required></label>
-              <label>{{ t('icon') }}<select v-model="app.icon"><option v-for="icon in ['window','printer','keypad','home']" :key="icon" :value="icon">{{ t(icon === 'window' ? 'applications' : icon === 'printer' ? 'printer' : icon === 'keypad' ? 'demo' : icon) }}</option></select></label>
+              <label>{{ t('icon') }}<select v-model="app.icon"><option v-for="icon in ['window','printer','keypad','home','foxoe']" :key="icon" :value="icon">{{ icon === 'foxoe' ? 'FoxOE' : t(icon === 'window' ? 'applications' : icon === 'printer' ? 'printer' : icon === 'keypad' ? 'demo' : icon) }}</option></select></label>
               <button class="icon-button danger-text" :aria-label="t('remove') + ' ' + app.name" @click="draft.apps = draft.apps.filter(item => item.id !== app.id)"><Icon name="remove" /></button>
             </div>
             <p v-if="!draft.apps.length" class="muted">{{ t('noApps') }}</p>

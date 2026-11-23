@@ -1,12 +1,13 @@
 {
-  "name": "foxoe", "version": "0.1.0-pre2", "private": true, "type": "module",
+  "name": "foxoe", "version": "0.1.0-pre3", "private": true, "type": "module",
   "license": "PolyForm-Noncommercial-1.0.0",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "vue-tsc --noEmit && vite build",
+    "build:icons": "node scripts/build-icons.mjs",
+    "build": "npm run build:icons && vue-tsc --noEmit && vite build",
     "test": "node --test tests/*.test.mjs",
     "check": "vue-tsc --noEmit"
   },
   "dependencies": {"vue": "^3.5.0", "@heroicons/vue": "^2.2.0"},
-  "devDependencies": {"@vitejs/plugin-vue": "^6.0.0", "vite": "^7.0.0", "typescript": "~5.9.0", "vue-tsc": "^3.0.0", "@types/node": "^22.0.0"}
+  "devDependencies": {"@resvg/resvg-wasm": "2.6.2", "@vitejs/plugin-vue": "^6.0.0", "vite": "^7.0.0", "typescript": "~5.9.0", "vue-tsc": "^3.0.0", "@types/node": "^22.0.0"}
 }

@@ -21,5 +21,8 @@ foxoe = "foxoe.__main__:main"
 [tool.setuptools]
 packages = ["foxoe"]
 
+[tool.setuptools.package-data]
+foxoe = ["assets/icons/*.png"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

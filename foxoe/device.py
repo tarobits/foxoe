@@ -3,20 +3,39 @@ import asyncio
 import threading
 import io
 from functools import lru_cache
+from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 
 from .controller import Controller
 
+ICON_NAMES = frozenset({'window', 'printer', 'home', 'keypad', 'play', 'backspace', 'check', 'close', 'back', 'reload', 'foxoe'})
+
+
+@lru_cache(maxsize=16)
+def builtin_icon(name):
+    # Never let API-supplied names become arbitrary filesystem paths.
+    name = name if name in ICON_NAMES else 'window'
+    try:
+        with Image.open(Path(__file__).parent / 'assets' / 'icons' / f'{name}.png') as asset:
+            return asset.convert('RGBA').resize((36, 36), Image.Resampling.LANCZOS)
+    except OSError:
+        return None
+
 
 @lru_cache(maxsize=128)
-def key_image(label: str, disabled: bool, home: bool, png: bytes | None = None):
+def key_image(label: str, disabled: bool, home: bool, png: bytes | None = None, *, icon: str | None = 'window'):
     image = Image.new("RGB", (72, 72), "#4f46e5" if home else "#1f2937")
     if png:
         with Image.open(io.BytesIO(png)) as asset:
             overlay = asset.convert("RGBA")
             image.paste(overlay, (0, 0), overlay)
         return ImageEnhance.Brightness(image).enhance(0.45) if disabled else image
+    symbol = builtin_icon('home' if home else icon) if home or icon else None
+    if symbol is not None:
+        if disabled:
+            symbol = ImageEnhance.Brightness(symbol).enhance(0.45)
+        image.paste(symbol, (18, 5), symbol)
     draw = ImageDraw.Draw(image)
     try:
         font = ImageFont.truetype("DejaVuSans.ttf", 14)
@@ -32,9 +51,10 @@ def key_image(label: str, disabled: bool, home: bool, png: bytes | None = None):
         else:
             line += char
     lines.append(line)
-    lines = lines[:3]
+    lines = lines[:2 if symbol is not None else 3]
     for index, text in enumerate(lines):
-        draw.text((36, 36 + (index - (len(lines) - 1) / 2) * 17), text,
+        y = 50 + index * 14 if symbol is not None else 36 + (index - (len(lines) - 1) / 2) * 17
+        draw.text((36, y), text,
                   font=font, fill="#9ca3af" if disabled else "#ffffff", anchor="mm")
     return image
 
@@ -98,7 +118,8 @@ class DeviceWorker:
                             if previous and button == old:
                                 continue
                             png = self.image_loader(button["image"]) if button and button.get("image") else None
-                            image = key_image(button["label"] if button else "", bool(button and button["disabled"]), index == 14, png)
+                            image = key_image(button["label"] if button else "", bool(button and button["disabled"]), index == 14, png,
+                                              icon=button["icon"] if button else None)
                             deck.set_key_image(index, PILHelper.to_native_key_format(deck, image))
                         self.rendered_generation = generation
                         previous = snapshot

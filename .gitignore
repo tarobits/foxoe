@@ -10,3 +10,5 @@ __pycache__/
 .impeccable/questions/
 .impeccable/review/
 .impeccable/mocks/
+extension/icons/*.png
+foxoe/assets/icons/*.png

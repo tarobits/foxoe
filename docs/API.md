@@ -46,16 +46,27 @@ Key 15 is always FoxOE Home. Buttons use row-major order on the 5×3 MK.2.
 
 ### Images
 
-Add an `images` object mapping asset names to data URLs. Use `image` on the app
-or a button to select one:
+Applications can register custom launcher and button icons in the same request.
+The launcher uses the app's `image` field; each screen button can reference its
+own uploaded `image`. The same asset name can be reused by multiple buttons:
 
 ```js
 manifest.images = {
-  printer: `data:image/png;base64,${pngBytes.toString('base64')}`
+  appLogo: `data:image/png;base64,${appLogoBytes.toString('base64')}`,
+  print: `data:image/png;base64,${printIconBytes.toString('base64')}`,
 };
-manifest.image = 'printer';
-manifest.screens[0].buttons[0].image = 'printer';
+manifest.image = 'appLogo';
+manifest.screens = [{
+  id: 'main',
+  buttons: [{ id: 'print', label: 'Print', icon: 'printer', image: 'print' }],
+}];
 ```
+
+Custom artwork fills the physical key. Without an `image`, FoxOE draws the
+selected built-in `icon` above its label. Built-in names are `window`, `printer`,
+`home`, `keypad`, `play`, `backspace`, `check`, `close`, `back`, `reload`, and `foxoe`.
+The reserved Home key always uses a house icon. Custom assets remain scoped to
+the registering app and can be replaced using its update credential.
 
 PNG, JPEG, and WebP are accepted. SVG, animations, external image URLs, invalid
 image references, decoded images over 1,048,576 pixels, and files over 256 KiB are

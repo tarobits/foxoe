@@ -30,6 +30,10 @@ Green indicates a connected device; red accompanies error text. Missing and
 stale widget data have textual states rather than invented values.
 
 Application-provided raster icons are content, separate from the shell palette.
+The FoxOE brand mark uses the user's orange fox illustration, with its original
+paths and gradient, without the source artwork's background or wordmark. This
+brand accent does not replace indigo action controls. Stream Deck action symbols
+use the same Heroicons as the dashboard; Home uses a house symbol.
 
 ## Typography
 

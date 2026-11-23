@@ -229,6 +229,8 @@ def create_app(directory: Path | None = None, hardware: bool = True):
 
     @app.get("/{route:path}")
     async def frontend(route: str):
+        if route == "foxoe.svg" and (dist / route).is_file():
+            return FileResponse(dist / route, media_type="image/svg+xml")
         if route in ("LICENSE", "THIRD_PARTY_NOTICES.txt") and (dist / route).is_file():
             return FileResponse(dist / route, media_type="text/plain")
         if route not in ("", "demo"):

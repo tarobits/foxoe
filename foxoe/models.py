@@ -4,7 +4,7 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-Icon = Literal["window", "printer", "home", "keypad", "play", "backspace", "check", "close", "back", "reload"]
+Icon = Literal["window", "printer", "home", "keypad", "play", "backspace", "check", "close", "back", "reload", "foxoe"]
 
 
 class StrictModel(BaseModel):
@@ -55,7 +55,7 @@ class Configuration(StrictModel):
     title: str = Field(default="FoxOE", min_length=1, max_length=60)
     locale: Literal["en", "de"] = "en"
     brightness: int = Field(default=65, ge=0, le=100, strict=True)
-    apps: list[Application] = Field(default_factory=lambda: [Application(id="foxoe-demo", name="FoxOE Demo", url="/demo", icon="keypad")], max_length=14)
+    apps: list[Application] = Field(default_factory=lambda: [Application(id="foxoe-demo", name="FoxOE Demo", url="/demo", icon="foxoe")], max_length=14)
     sources: list["DataSource"] = Field(default_factory=list, max_length=12)
     widgets: list["Widget"] = Field(default_factory=lambda: [
         Widget(id="clock", kind="clock", x=0, y=0, w=5, h=2),
