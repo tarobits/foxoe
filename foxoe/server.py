@@ -6,12 +6,13 @@ import secrets
 import sqlite3
 import re
 import os
+import io
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 import anyio
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -19,8 +20,8 @@ from pydantic import ValidationError
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .controller import Controller
-from .device import DeviceWorker
-from .models import Configuration
+from .device import DeviceWorker, key_image
+from .models import Configuration, DataSource, KeyPreview
 from .store import Conflict, Store
 from .sources import Sources
 from .registration import registration_app
@@ -65,6 +66,7 @@ def create_app(directory: Path | None = None, hardware: bool = True):
     app = FastAPI(title="FoxOE", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.controller = controller
     app.state.store = store
+    app.state.sources = sources
     app.state.registration = registration_app(store, controller)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1"])
 
@@ -120,6 +122,25 @@ def create_app(directory: Path | None = None, hardware: bool = True):
     @app.get("/api/data")
     async def data():
         return sources.cache
+
+    @app.post('/api/data/preview')
+    async def preview_source(source: DataSource):
+        result = await sources.preview(source)
+        return JSONResponse(result, status_code=502 if result['error'] else 200)
+
+    @app.get('/api/deck/preview')
+    def preview_key(key: str = Query(max_length=2048)):
+        try:
+            value = KeyPreview.model_validate_json(key)
+        except ValidationError:
+            return JSONResponse({'error': 'invalid_configuration'}, status_code=422)
+        rendered = key_image(value.label, value.disabled, value.home,
+                             store.image(value.image) if value.image else None,
+                             icon=value.icon, text_size=value.textSize, icon_color=value.iconColor,
+                             text_color=value.textColor, background_color=value.backgroundColor)
+        output = io.BytesIO()
+        rendered.save(output, format='PNG')
+        return Response(content=output.getvalue(), media_type='image/png')
 
     @app.put("/api/config")
     async def configure(value: Configuration):

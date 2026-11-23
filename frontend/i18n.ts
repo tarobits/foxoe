@@ -3,6 +3,16 @@ import { ref } from 'vue';
 export const locale = ref<'en' | 'de'>('en');
 export const messages: Record<'en' | 'de', Record<string, string>> = {
   en: {
+    layout: 'Custom layout', appearance: 'Appearance', rules: 'Rules', widgetOptions: 'Widget options', editTarget: 'Edit', wholeWidget: 'Whole widget', item: 'Item', addItem: 'Add item', removeItem: 'Remove item',
+    rows: 'Rows', columns: 'Columns', addRow: 'Add row', addColumn: 'Add column', removeRow: 'Remove last row', removeColumn: 'Remove last column', trackWeights: 'Sizes are relative: 2 takes twice the space of 1.', noWidgetItems: 'Add an item to this layout.',
+    itemPlacement: 'Position within widget', rowSpan: 'Rows spanned', columnSpan: 'Columns spanned', itemOverlap: 'Items must fit inside the widget without overlapping.',
+    fontSize: 'Text size (px)', automatic: 'Automatic', alignment: 'Alignment', left: 'Left', center: 'Center', right: 'Right', padding: 'Padding (px)', gap: 'Item gap (px)',
+    addRule: 'Add rule', removeRule: 'Remove rule', ruleOrder: 'Matching rules apply from top to bottom. Unavailable data does not trigger rules.', comparison: 'Comparison', valueType: 'Value type', change: 'Change', result: 'Result', visible: 'Visibility', show: 'Show', hide: 'Hide', color: 'Color', moveRuleUp: 'Move rule up', moveRuleDown: 'Move rule down',
+    op_eq: 'Equals', op_ne: 'Does not equal', op_gt: 'Greater than', op_gte: 'At least', op_lt: 'Less than', op_lte: 'At most', op_contains: 'Contains', op_exists: 'Has a value', op_missing: 'Missing or null', op_truthy: 'Truthy', op_falsy: 'Falsy',
+    type_string: 'Text', type_number: 'Number', type_boolean: 'Boolean', type_null: 'Null', yes: 'True', no: 'False', widgetPreview: 'Widget preview', hiddenByRule: 'Hidden by a rule',
+    previewJson: 'Preview JSON', refreshJson: 'Refresh JSON', jsonResponse: 'JSON response', fetchedAt: 'Fetched at',
+    sourcePreviewFailed: 'Could not fetch JSON. Check the URL and credentials, then try again.',
+    previewRedaction: 'Sensitive fields are omitted. Long values and lists may be shortened.',
     administration: 'Administration', adminPassword: 'Administrator password', signIn: 'Sign in', signOut: 'Sign out',
     admin_invalid_login: 'Incorrect password.', admin_try_later: 'Too many attempts. Try again in a minute.', admin_login_required: 'Please sign in again.',
     https_required: 'Use HTTPS to access administration.', message_too_large: 'The request is too large.',
@@ -32,6 +42,16 @@ export const messages: Record<'en' | 'de', Record<string, string>> = {
     defaultApp: 'New application', defaultSource: 'New data source', widget: 'Widget', documentTitle: 'FoxOE', printer: 'Printer',
   },
   de: {
+    layout: 'Eigenes Layout', appearance: 'Darstellung', rules: 'Regeln', widgetOptions: 'Widget-Optionen', editTarget: 'Bearbeiten', wholeWidget: 'Gesamtes Widget', item: 'Element', addItem: 'Element hinzufügen', removeItem: 'Element entfernen',
+    rows: 'Zeilen', columns: 'Spalten', addRow: 'Zeile hinzufügen', addColumn: 'Spalte hinzufügen', removeRow: 'Letzte Zeile entfernen', removeColumn: 'Letzte Spalte entfernen', trackWeights: 'Größen sind relativ: 2 belegt doppelt so viel Platz wie 1.', noWidgetItems: 'Füge diesem Layout ein Element hinzu.',
+    itemPlacement: 'Position im Widget', rowSpan: 'Zeilenanzahl', columnSpan: 'Spaltenanzahl', itemOverlap: 'Elemente müssen ohne Überlappung in das Widget passen.',
+    fontSize: 'Textgröße (px)', automatic: 'Automatisch', alignment: 'Ausrichtung', left: 'Links', center: 'Mitte', right: 'Rechts', padding: 'Innenabstand (px)', gap: 'Elementabstand (px)',
+    addRule: 'Regel hinzufügen', removeRule: 'Regel entfernen', ruleOrder: 'Passende Regeln gelten von oben nach unten. Nicht verfügbare Daten lösen keine Regeln aus.', comparison: 'Vergleich', valueType: 'Werttyp', change: 'Ändern', result: 'Ergebnis', visible: 'Sichtbarkeit', show: 'Anzeigen', hide: 'Ausblenden', color: 'Farbe', moveRuleUp: 'Regel nach oben', moveRuleDown: 'Regel nach unten',
+    op_eq: 'Ist gleich', op_ne: 'Ist ungleich', op_gt: 'Größer als', op_gte: 'Mindestens', op_lt: 'Kleiner als', op_lte: 'Höchstens', op_contains: 'Enthält', op_exists: 'Hat einen Wert', op_missing: 'Fehlt oder null', op_truthy: 'Wahrheitswert wahr', op_falsy: 'Wahrheitswert falsch',
+    type_string: 'Text', type_number: 'Zahl', type_boolean: 'Boolean', type_null: 'Null', yes: 'Wahr', no: 'Falsch', widgetPreview: 'Widget-Vorschau', hiddenByRule: 'Durch eine Regel ausgeblendet',
+    previewJson: 'JSON-Vorschau', refreshJson: 'JSON aktualisieren', jsonResponse: 'JSON-Antwort', fetchedAt: 'Abgerufen am',
+    sourcePreviewFailed: 'JSON konnte nicht abgerufen werden. Prüfe die URL und Zugangsdaten und versuche es erneut.',
+    previewRedaction: 'Sensible Felder werden ausgelassen. Lange Werte und Listen können gekürzt sein.',
     administration: 'Verwaltung', adminPassword: 'Administratorpasswort', signIn: 'Anmelden', signOut: 'Abmelden',
     admin_invalid_login: 'Falsches Passwort.', admin_try_later: 'Zu viele Versuche. Versuche es in einer Minute erneut.', admin_login_required: 'Bitte melde dich erneut an.',
     https_required: 'Verwende HTTPS für den Verwaltungszugang.', message_too_large: 'Die Anfrage ist zu groß.',

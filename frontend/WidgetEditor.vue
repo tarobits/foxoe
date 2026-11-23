@@ -1,0 +1,93 @@
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue';
+import type { Widget, WidgetItem, WidgetRule, Source, DataEntry } from './types';
+import { t } from './i18n';
+import Icon from './Icon.vue';
+import IconPicker from './IconPicker.vue';
+import WidgetContent from './WidgetContent.vue';
+import { itemFits, appearance, contentStyle } from './model.js';
+const props = defineProps<{ widget: Widget; sources: Source[]; data: Record<string, DataEntry>; now: Date }>();
+const selected = ref(''), tab = ref<'content' | 'appearance' | 'rules'>('content');
+const item = computed(() => props.widget.items.find(item => item.id === selected.value));
+const target = computed(() => item.value || props.widget);
+const unary = ['exists', 'missing', 'truthy', 'falsy'];
+const operators: WidgetRule['operator'][] = ['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'contains', 'exists', 'missing', 'truthy', 'falsy'];
+function addItem() {
+  if (props.widget.items.length >= 24) return;
+  for (let row = 0; row < props.widget.rows.length; row++) for (let column = 0; column < props.widget.columns.length; column++) {
+    const candidate: WidgetItem = { id: `item-${crypto.randomUUID().slice(0, 8)}`, kind: 'text', title: '', text: '', source: 'system', path: '', itemPath: '', unit: '', icon: 'window', row, column, rowSpan: 1, columnSpan: 1, rules: [], align: 'left' };
+    if (itemFits(candidate, props.widget)) { props.widget.items.push(candidate); selected.value = candidate.id; tab.value = 'content'; return; }
+  }
+}
+const hasSpace = computed(() => props.widget.items.length < 24 && props.widget.items.reduce((n, item) => n + item.rowSpan * item.columnSpan, 0) < props.widget.rows.length * props.widget.columns.length);
+function removeItem() {
+  props.widget.items = props.widget.items.filter(item => item.id !== selected.value); selected.value = '';
+}
+function canRemoveTrack(axis: 'rows' | 'columns') {
+  const count = props.widget[axis].length;
+  return count > 1 && props.widget.items.every(item => axis === 'rows' ? item.row + item.rowSpan < count : item.column + item.columnSpan < count);
+}
+function addRule() {
+  target.value.rules.push({ source: target.value.source, path: target.value.path, operator: 'eq', value: '', target: 'textColor', color: '#4ade80', visible: true });
+}
+function valueType(rule: WidgetRule) { return rule.value === null ? 'null' : typeof rule.value; }
+function setType(rule: WidgetRule, event: Event) {
+  const type = (event.target as HTMLSelectElement).value;
+  rule.value = type === 'number' ? 0 : type === 'boolean' ? true : type === 'null' ? null : '';
+}
+watch(() => props.widget.kind, () => { selected.value = ''; });
+</script>
+<template>
+  <div class="widget-editor form-stack">
+    <div v-if="widget.kind === 'layout'" class="form-row">
+      <label class="grow">{{ t('editTarget') }}<select v-model="selected"><option value="">{{ t('wholeWidget') }}</option><option v-for="(entry, index) in widget.items" :key="entry.id" :value="entry.id">{{ entry.title || `${t('item')} ${index + 1}` }}</option></select></label>
+      <button type="button" class="secondary" :disabled="!hasSpace" @click="addItem"><Icon name="plus" />{{ t('addItem') }}</button>
+      <button v-if="item" type="button" class="icon-button danger-text" :aria-label="t('removeItem')" @click="removeItem"><Icon name="remove" /></button>
+    </div>
+    <nav class="editor-tabs" :aria-label="t('widgetOptions')"><button v-for="section in (['content', 'appearance', 'rules'] as const)" :key="section" type="button" :class="{ selected: tab === section }" :aria-pressed="tab === section" @click="tab = section">{{ t(section) }}</button></nav>
+    <Transition name="notice" mode="out-in">
+      <div v-if="tab === 'content'" key="content" class="form-stack">
+        <div class="form-row"><label class="grow">{{ t('title') }}<input v-model="target.title" maxlength="60"></label><label>{{ t('kind') }}<select v-model="target.kind"><option v-for="kind in ['clock','value','list','text','icon', ...(!item ? ['layout'] : [])]" :key="kind" :value="kind">{{ t(kind) }}</option></select></label></div>
+        <template v-if="target.kind === 'layout'">
+          <div v-for="axis in (['columns', 'rows'] as const)" :key="axis" class="track-editor">
+            <div class="section-header"><h3>{{ t(axis) }}</h3><div class="header-actions"><button type="button" class="icon-button" :aria-label="t(axis === 'rows' ? 'addRow' : 'addColumn')" :disabled="widget[axis].length >= 6" @click="widget[axis].push(1)"><Icon name="plus" /></button><button type="button" class="icon-button" :aria-label="t(axis === 'rows' ? 'removeRow' : 'removeColumn')" :disabled="!canRemoveTrack(axis)" @click="widget[axis].pop()"><Icon name="remove" /></button></div></div>
+            <div class="track-weights"><label v-for="(_, index) in widget[axis]" :key="index">{{ t(axis === 'rows' ? 'y' : 'x') }} {{ index + 1 }}<input v-model.number="widget[axis][index]" type="number" min="1" max="12" required></label></div>
+          </div>
+          <p class="muted help">{{ t('trackWeights') }}</p>
+          <p v-if="!widget.items.length" class="muted">{{ t('noWidgetItems') }}</p>
+        </template>
+        <label v-if="target.kind === 'text'">{{ t('content') }}<textarea v-model="target.text" rows="3" maxlength="1000"></textarea></label>
+        <IconPicker v-if="target.kind === 'icon'" :model-value="target.icon ?? null" @update:model-value="target.icon = $event" />
+        <template v-if="['value', 'list'].includes(target.kind)">
+          <label>{{ t('source') }}<select v-model="target.source"><option value="system">{{ t('system') }}</option><option v-for="source in sources" :key="source.id" :value="source.id">{{ source.name }}</option></select></label>
+          <div class="form-row"><label class="grow">{{ t('path') }}<select v-if="target.source === 'system'" v-model="target.path"><option v-for="path in ['load1','memoryPercent','memoryUsedMiB','memoryTotalMiB','temperatureC']" :key="path" :value="path">{{ t(path) }}</option></select><input v-else v-model="target.path" maxlength="200" spellcheck="false"></label><label v-if="target.kind === 'value'">{{ t('unit') }}<input v-model="target.unit" maxlength="12"></label><label v-else>{{ t('itemPath') }}<input v-model="target.itemPath" maxlength="200" spellcheck="false"></label></div>
+        </template>
+        <fieldset v-if="item"><legend>{{ t('itemPlacement') }}</legend><div class="position-fields">
+          <label>{{ t('x') }}<input :value="item.column + 1" type="number" min="1" :max="widget.columns.length" @input="item.column = Number(($event.target as HTMLInputElement).value) - 1"></label>
+          <label>{{ t('y') }}<input :value="item.row + 1" type="number" min="1" :max="widget.rows.length" @input="item.row = Number(($event.target as HTMLInputElement).value) - 1"></label>
+          <label>{{ t('columnSpan') }}<input v-model.number="item.columnSpan" type="number" min="1" :max="widget.columns.length"></label>
+          <label>{{ t('rowSpan') }}<input v-model.number="item.rowSpan" type="number" min="1" :max="widget.rows.length"></label>
+        </div><p v-if="!itemFits(item, widget)" class="data-warning" role="alert">{{ t('itemOverlap') }}</p></fieldset>
+      </div>
+      <div v-else-if="tab === 'appearance'" key="appearance" class="form-stack">
+        <div class="widget-color-fields"><label v-for="field in (['textColor', 'backgroundColor', 'iconColor'] as const)" :key="field">{{ t(field) }}<input type="color" :value="target[field] || (field === 'backgroundColor' ? '#1f2937' : '#ffffff')" @input="target[field] = ($event.target as HTMLInputElement).value"></label><button type="button" class="secondary" @click="target.textColor = target.backgroundColor = target.iconColor = null">{{ t('resetColors') }}</button></div>
+        <div class="form-row"><label>{{ t('fontSize') }}<input :value="target.fontSize ?? ''" type="number" min="8" max="96" :placeholder="t('automatic')" @input="target.fontSize = ($event.target as HTMLInputElement).value === '' ? null : Number(($event.target as HTMLInputElement).value)"></label><label>{{ t('alignment') }}<select v-model="target.align"><option v-for="align in ['left','center','right']" :key="align" :value="align">{{ t(align) }}</option></select></label></div>
+        <div v-if="!item" class="form-row"><label>{{ t('padding') }}<input v-model.number="widget.padding" type="number" min="0" max="48" required></label><label v-if="widget.kind === 'layout'">{{ t('gap') }}<input v-model.number="widget.gap" type="number" min="0" max="32" required></label></div>
+      </div>
+      <div v-else key="rules" class="form-stack">
+        <div class="section-header"><h3>{{ t('rules') }}</h3><button type="button" class="secondary" :disabled="target.rules.length >= 16" @click="addRule"><Icon name="plus" />{{ t('addRule') }}</button></div>
+        <p class="muted help">{{ t('ruleOrder') }}</p>
+        <div v-for="(rule, index) in target.rules" :key="index" class="rule-editor form-stack">
+          <div class="form-row"><label>{{ t('source') }}<select v-model="rule.source"><option value="system">{{ t('system') }}</option><option v-for="source in sources" :key="source.id" :value="source.id">{{ source.name }}</option></select></label><label class="grow">{{ t('path') }}<input v-model="rule.path" maxlength="200" spellcheck="false"></label><button type="button" class="icon-button danger-text" :aria-label="t('removeRule')" @click="target.rules.splice(index, 1)"><Icon name="remove" /></button></div>
+          <div class="form-row"><label>{{ t('comparison') }}<select v-model="rule.operator"><option v-for="operator in operators" :key="operator" :value="operator">{{ t(`op_${operator}`) }}</option></select></label><template v-if="!unary.includes(rule.operator)"><label>{{ t('valueType') }}<select :value="valueType(rule)" @change="setType(rule, $event)"><option v-for="type in ['string','number','boolean','null']" :key="type" :value="type">{{ t(`type_${type}`) }}</option></select></label><label v-if="rule.value !== null">{{ t('value') }}<input v-if="typeof rule.value === 'number'" v-model.number="rule.value" type="number" step="any" required><select v-else-if="typeof rule.value === 'boolean'" v-model="rule.value"><option :value="true">{{ t('yes') }}</option><option :value="false">{{ t('no') }}</option></select><input v-else v-model="rule.value" maxlength="1000"></label></template></div>
+          <div class="form-row"><label>{{ t('change') }}<select v-model="rule.target"><option v-for="field in ['textColor','backgroundColor','iconColor','visible']" :key="field" :value="field">{{ t(field) }}</option></select></label><label v-if="rule.target === 'visible'">{{ t('result') }}<select v-model="rule.visible"><option :value="true">{{ t('show') }}</option><option :value="false">{{ t('hide') }}</option></select></label><label v-else>{{ t('color') }}<input type="color" :value="rule.color || '#ffffff'" @input="rule.color = ($event.target as HTMLInputElement).value"></label><div class="header-actions"><button type="button" class="icon-button" :disabled="index === 0" :aria-label="t('moveRuleUp')" @click="target.rules.splice(index - 1, 0, target.rules.splice(index, 1)[0]!)"><Icon name="arrow-up" /></button><button type="button" class="icon-button" :disabled="index === target.rules.length - 1" :aria-label="t('moveRuleDown')" @click="target.rules.splice(index + 1, 0, target.rules.splice(index, 1)[0]!)"><Icon name="arrow-down" /></button></div></div>
+        </div>
+      </div>
+    </Transition>
+    <section class="widget-editor-preview" :aria-label="t('widgetPreview')">
+      <h3>{{ t('widgetPreview') }}</h3>
+      <p v-if="!appearance(widget, data).visible" class="muted">{{ t('hiddenByRule') }}</p>
+      <div v-else class="widget-preview-panel" :style="{ ...contentStyle(widget, data), padding: `${widget.padding}px` }"><WidgetContent :widget="widget" :data="data" :now="now" /></div>
+    </section>
+  </div>
+</template>

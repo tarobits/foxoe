@@ -80,7 +80,7 @@ class AdminGateway:
             return
         login = path == '/api/admin/login' and method == 'POST'
         public = method == 'GET' and (path in ('/', '/foxoe.svg', '/heroicons.svg') or path.startswith('/assets/'))
-        allowed = public or (method == 'GET' and (path in ('/api/config', '/api/state', '/api/data') or path.startswith('/api/images/'))) or (method == 'PUT' and path == '/api/config')
+        allowed = public or (method == 'GET' and (path in ('/api/config', '/api/state', '/api/data', '/api/deck/preview') or path.startswith('/api/images/'))) or (method == 'PUT' and path == '/api/config') or (method == 'POST' and path == '/api/data/preview')
         if not login and not allowed:
             await respond({'error': 'not_found'}, 404)
             return

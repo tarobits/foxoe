@@ -3,10 +3,12 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import Icon from './Icon.vue';
 import IconPicker from './IconPicker.vue';
 import DeckKey from './DeckKey.vue';
+import SourcePreview from './SourcePreview.vue';
+import WidgetEditor from './WidgetEditor.vue';
 import WidgetContent from './WidgetContent.vue';
 import Demo from './Demo.vue';
 import { t, locale } from './i18n';
-import { firstSpace, fits } from './model.js';
+import { firstSpace, fits, itemFits, appearance, contentStyle, usesSource } from './model.js';
 import type { Config, Widget, Source, DeckState, DataEntry } from './types';
 
 defineProps<{ remote?: boolean }>();
@@ -106,7 +108,7 @@ function addSource() {
 }
 function removeSource(source: Source) {
   if (!draft.value) return;
-  if (draft.value.widgets.some(widget => ['value', 'list'].includes(widget.kind) && widget.source === source.id)) { error.value = t('sourceInUse'); return; }
+  if (draft.value.widgets.some(widget => usesSource(widget, source.id))) { error.value = t('sourceInUse'); return; }
   draft.value.sources = draft.value.sources.filter(item => item.id !== source.id);
 }
 async function showToken() {
@@ -124,7 +126,7 @@ async function editWidget(widget?: Widget) {
   if (widget) selected.value = clone(widget);
   else {
     if (draft.value.widgets.length >= 24) { error.value = t('noSpace'); return; }
-    const candidate = firstSpace({ id: id('widget'), kind: 'value', title: '', text: '', source: 'system', path: 'load1', itemPath: '', unit: '', x: 0, y: 0, w: 4, h: 2 }, draft.value.widgets);
+    const candidate = firstSpace({ id: id('widget'), kind: 'value', title: '', text: '', source: 'system', path: 'load1', itemPath: '', unit: '', x: 0, y: 0, w: 8, h: 4, padding: 24, gap: 8, columns: [1, 1], rows: [1], items: [], rules: [], align: 'left', icon: 'window' }, draft.value.widgets);
     if (!candidate) { error.value = t('noSpace'); return; }
     selected.value = candidate as Widget;
   }
@@ -140,6 +142,7 @@ function closeWidget() {
 function applyWidget() {
   if (!selected.value || !draft.value) return;
   if (!fits(selected.value, draft.value.widgets)) { widgetError.value = t('overlap'); return; }
+  if (selected.value.items.some(item => !itemFits(item, selected.value))) { widgetError.value = t('itemOverlap'); return; }
   const index = draft.value.widgets.findIndex(widget => widget.id === selected.value!.id);
   if (index < 0) draft.value.widgets.push(clone(selected.value)); else draft.value.widgets[index] = clone(selected.value);
   closeWidget();
@@ -159,12 +162,12 @@ function keyMove(event: KeyboardEvent, widget: Widget, resize = false) {
 function startDrag(event: PointerEvent, widget: Widget, resize = false) {
   if (event.button !== 0 || !draft.value || !grid.value) return;
   event.preventDefault(); removeDrag?.();
-  const width = (grid.value.getBoundingClientRect().width + 16) / 12;
+  const width = grid.value.clientWidth / 24;
   const startX = event.clientX; const startY = event.clientY;
   const original = clone(widget);
   const move = (pointer: PointerEvent) => {
-    const dx = Math.round((pointer.clientX - startX) / width); const dy = Math.round((pointer.clientY - startY) / 112);
-    preview.value = { ...original, ...(resize ? { w: Math.max(2, Math.min(12 - original.x, original.w + dx)), h: Math.max(1, Math.min(12, original.h + dy)) } : { x: Math.max(0, Math.min(12 - original.w, original.x + dx)), y: Math.max(0, Math.min(24 - original.h, original.y + dy)) }) };
+    const dx = Math.round((pointer.clientX - startX) / width); const dy = Math.round((pointer.clientY - startY) / 56);
+    preview.value = { ...original, ...(resize ? { w: Math.max(2, Math.min(24 - original.x, original.w + dx)), h: Math.max(1, Math.min(24, 48 - original.y, original.h + dy)) } : { x: Math.max(0, Math.min(24 - original.w, original.x + dx)), y: Math.max(0, Math.min(48 - original.h, original.y + dy)) }) };
   };
   const end = () => {
     if (preview.value && draft.value) {
@@ -188,7 +191,7 @@ onUnmounted(() => { abort.abort(); clearTimeout(pollTimer); clearInterval(clockT
 
 <template>
   <Demo v-if="isDemo" />
-  <div v-else-if="!config" class="loading-screen"><h1>FoxOE</h1><p :role="error ? 'alert' : 'status'">{{ error || t('loading') }}</p><button v-if="error" class="secondary" @click="load">{{ t('retry') }}</button></div>
+  <div v-else-if="!config" class="loading-screen"><img class="loading-mark" src="/foxoe.svg" alt="" width="96" height="96"><h1>FoxOE</h1><p :role="error ? 'alert' : 'status'">{{ error || t('loading') }}</p><button v-if="error" class="secondary" @click="load">{{ t('retry') }}</button></div>
   <div v-else class="shell">
     <header class="shell-header">
       <div class="brand"><img class="brand-mark" src="/foxoe.svg" alt=""><h1>{{ screen === 'settings' ? t('settings') : active?.title }}</h1></div>
@@ -204,11 +207,11 @@ onUnmounted(() => { abort.abort(); clearTimeout(pollTimer); clearInterval(clockT
       <main v-if="screen === 'home'" key="home" class="dashboard" :class="{ editing }">
         <Transition name="notice"><div v-if="editing" class="edit-toolbar"><span>{{ t('editDashboard') }}</span><button class="secondary" @click="editWidget()"><Icon name="plus" />{{ t('addWidget') }}</button></div></Transition>
         <div v-if="!active?.widgets.length" class="empty-state"><Icon name="keypad" /><h2>{{ t('noWidgets') }}</h2><button class="primary" @click="beginEdit(); editWidget()">{{ t('addWidget') }}</button></div>
-        <div v-else ref="grid" class="widget-grid" :style="{ gridTemplateRows: `repeat(${rows}, 96px)` }">
+        <div v-else ref="grid" class="widget-grid" :style="{ gridTemplateRows: `repeat(${rows}, 48px)` }">
           <TransitionGroup name="surface">
-          <article v-for="widget in active?.widgets" :key="widget.id" class="widget-panel" :class="{ moving: preview?.id === widget.id, invalid: preview?.id === widget.id && !fits(preview, active!.widgets) }" :style="placement(widget)">
+          <article v-for="widget in active?.widgets" v-show="editing || appearance(widget, data).visible" :key="widget.id" class="widget-panel" :class="{ moving: preview?.id === widget.id, invalid: preview?.id === widget.id && !fits(preview, active!.widgets), 'rule-hidden': editing && !appearance(widget, data).visible }" :style="{ ...placement(widget), ...contentStyle(widget, data), padding: `${widget.padding}px`, paddingTop: editing ? `${Math.max(56, widget.padding)}px` : undefined }">
             <Transition name="notice"><div v-if="editing" class="widget-tools"><button class="icon-button drag-handle" :aria-label="t('moveWidget')" @pointerdown="startDrag($event, widget)" @keydown="keyMove($event, widget)"><Icon name="move" /></button><button class="icon-button" :aria-label="t('editWidget')" @click="editWidget(widget)"><Icon name="edit" /></button></div></Transition>
-            <WidgetContent :widget="widget" :entry="data[widget.source]" :now="now" />
+            <WidgetContent :widget="widget" :data="data" :now="now" :editing="editing" />
             <Transition name="notice"><button v-if="editing" class="icon-button resize-handle" :aria-label="t('resizeWidget')" @pointerdown="startDrag($event, widget, true)" @keydown="keyMove($event, widget, true)"><Icon name="resize" /></button></Transition>
           </article>
           </TransitionGroup>
@@ -238,6 +241,7 @@ onUnmounted(() => { abort.abort(); clearTimeout(pollTimer); clearInterval(clockT
               <div class="form-row"><label>{{ t('name') }}<input v-model="source.name" maxlength="60" required></label><label class="grow">{{ t('url') }}<input v-model="source.url" type="url" spellcheck="false" required></label><button class="icon-button danger-text" :aria-label="t('remove') + ' ' + source.name" @click="removeSource(source)"><Icon name="remove" /></button></div>
               <div class="form-row"><label>{{ t('interval') }}<input v-model.number="source.interval" type="number" min="5" max="3600"></label><label class="grow">{{ t('authEnv') }}<input v-model="source.authEnv" spellcheck="false" pattern="(FOXOE_SECRET_[A-Z0-9_]+)?"></label></div>
               <p class="muted help">{{ t('credentialHelp') }}</p>
+              <SourcePreview :source="source" @expired="emit('expired')" />
             </div>
           </section>
           <section v-else key="system" class="settings-section system-settings">
@@ -258,10 +262,8 @@ onUnmounted(() => { abort.abort(); clearTimeout(pollTimer); clearInterval(clockT
       <form v-if="selected" @submit.prevent="applyWidget">
         <header class="dialog-header"><h2 id="widget-dialog-title">{{ t('editWidget') }}</h2><button type="button" class="icon-button" :aria-label="t('close')" @click="closeWidget"><Icon name="close" /></button></header>
         <div class="dialog-body form-stack">
-          <div class="form-row"><label class="grow">{{ t('title') }}<input v-model="selected.title" maxlength="60"></label><label>{{ t('kind') }}<select v-model="selected.kind"><option v-for="kind in ['clock','value','list','text']" :key="kind" :value="kind">{{ t(kind) }}</option></select></label></div>
-          <label v-if="selected.kind === 'text'">{{ t('content') }}<textarea v-model="selected.text" rows="3" maxlength="1000"></textarea></label>
-          <template v-if="['value','list'].includes(selected.kind)"><label>{{ t('source') }}<select v-model="selected.source"><option value="system">{{ t('system') }}</option><option v-for="source in draft?.sources" :key="source.id" :value="source.id">{{ source.name }}</option></select></label><div class="form-row"><label class="grow">{{ t('path') }}<select v-if="selected.source === 'system'" v-model="selected.path"><option v-for="path in ['load1','memoryPercent','memoryUsedMiB','memoryTotalMiB','temperatureC']" :key="path" :value="path">{{ t(path) }}</option></select><input v-else v-model="selected.path" spellcheck="false" maxlength="200"></label><label v-if="selected.kind === 'value'">{{ t('unit') }}<input v-model="selected.unit" maxlength="12"></label><label v-else>{{ t('itemPath') }}<input v-model="selected.itemPath" spellcheck="false" maxlength="200"></label></div></template>
-          <fieldset><legend>{{ t('placement') }}</legend><div class="position-fields"><label>{{ t('x') }}<input :value="selected.x + 1" type="number" min="1" max="12" @input="selected.x = Number(($event.target as HTMLInputElement).value) - 1"></label><label>{{ t('y') }}<input :value="selected.y + 1" type="number" min="1" max="24" @input="selected.y = Number(($event.target as HTMLInputElement).value) - 1"></label><label>{{ t('width') }}<input v-model.number="selected.w" type="number" min="2" max="12"></label><label>{{ t('height') }}<input v-model.number="selected.h" type="number" min="1" max="12"></label></div></fieldset>
+          <WidgetEditor :widget="selected" :sources="draft?.sources || []" :data="data" :now="now" />
+          <fieldset><legend>{{ t('placement') }}</legend><div class="position-fields"><label>{{ t('x') }}<input :value="selected.x + 1" type="number" min="1" max="24" @input="selected.x = Number(($event.target as HTMLInputElement).value) - 1"></label><label>{{ t('y') }}<input :value="selected.y + 1" type="number" min="1" max="48" @input="selected.y = Number(($event.target as HTMLInputElement).value) - 1"></label><label>{{ t('width') }}<input v-model.number="selected.w" type="number" min="2" max="24"></label><label>{{ t('height') }}<input v-model.number="selected.h" type="number" min="1" max="24"></label></div></fieldset>
           <p v-if="widgetError" class="alert error" role="alert">{{ widgetError }}</p>
         </div>
         <footer class="dialog-actions"><button type="button" class="text-button danger-text" @click="removeWidget">{{ t('deleteWidget') }}</button><div class="header-actions"><button type="button" class="secondary" @click="closeWidget">{{ t('cancel') }}</button><button type="submit" class="primary">{{ t('done') }}</button></div></footer>

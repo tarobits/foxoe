@@ -18,13 +18,14 @@ test('moves and resizes reject overlaps, fractional coordinates and out-of-bound
   assert.ok(!fits({ ...widgets[0], w: 5 }, widgets));
   assert.ok(!fits({ ...widgets[0], y: -1 }, widgets));
   assert.ok(!fits({ ...widgets[0], x: 8.5 }, widgets));
-  assert.ok(!fits({ ...widgets[0], y: 23 }, widgets));
-  assert.ok(!fits({ ...widgets[0], h: 13 }, [widgets[0]]));
-  assert.ok(fits({ ...widgets[0], h: 12 }, [widgets[0]]));
+  assert.ok(!fits({ ...widgets[0], y: 47 }, widgets));
+  assert.ok(!fits({ ...widgets[0], h: 25 }, [widgets[0]]));
+  assert.ok(fits({ ...widgets[0], h: 24 }, [widgets[0]]));
+  assert.ok(fits({ ...widgets[0], x: 20, y: 46 }, widgets));
   assert.deepEqual(widgets[0], { id: 'a', x: 0, y: 0, w: 4, h: 2 });
   const next = firstSpace({ id: 'c', x: 0, y: 0, w: 4, h: 2 }, widgets);
   assert.equal(next.x, 8);
-  assert.equal(firstSpace({ id: 'c', w: 4, h: 2 }, [{ id: 'full', x: 0, y: 0, w: 12, h: 24 }]), null);
+  assert.equal(firstSpace({ id: 'c', w: 4, h: 2 }, [{ id: 'full', x: 0, y: 0, w: 24, h: 48 }]), null);
 });
 test('queue truncation is explicit at the display boundary', () => {
   assert.deepEqual(listPage(null), { rows: [], truncated: false });
@@ -45,7 +46,7 @@ test('both dashboard locales cover literal UI translation keys', async () => {
   const module = ts.transpile(raw.replace("import { ref } from 'vue';", 'const ref = value => ({value});'), { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 });
   const { messages } = await import(`data:text/javascript;base64,${Buffer.from(module).toString('base64')}`);
   assert.deepEqual(Object.keys(messages.en).sort(), Object.keys(messages.de).sort());
-  for (const file of ['App.vue', 'WidgetContent.vue', 'Demo.vue', 'IconPicker.vue', 'Access.vue', 'DeckKey.vue']) {
+  for (const file of ['App.vue', 'WidgetContent.vue', 'WidgetValue.vue', 'WidgetEditor.vue', 'Demo.vue', 'IconPicker.vue', 'Access.vue', 'DeckKey.vue', 'SourcePreview.vue']) {
     const source = await readFile(new URL(`../frontend/${file}`, import.meta.url), 'utf8');
     for (const match of source.matchAll(/\bt\('([^']+)'\)/g)) assert.ok(messages.en[match[1]], `Missing ${match[1]}`);
   }

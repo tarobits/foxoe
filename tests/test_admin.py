@@ -69,6 +69,60 @@ def test_admin_cannot_expose_local_credentials_or_bridge(admin):
     assert client.get('http://pi.test:8767/api/access').status_code == 403
 
 
+def test_remote_preview_requires_session_origin_and_valid_draft(admin, monkeypatch):
+    client, _, local = admin
+    calls = []
+    async def preview(source):
+        calls.append(source)
+        return {'value': {'count': 0}, 'updatedAt': 123, 'error': None}
+    monkeypatch.setattr(local.state.sources, 'preview', preview)
+    draft = {'id': 'draft', 'name': 'Draft', 'url': 'https://example.test/json', 'interval': 15, 'authEnv': ''}
+    assert client.post('/api/data/preview', json=draft, headers={'origin': ORIGIN}).status_code == 401
+    login(client)
+    for headers in ({}, {'origin': 'https://evil.test'}, {'origin': ORIGIN, 'sec-fetch-site': 'cross-site'}):
+        assert client.post('/api/data/preview', json=draft, headers=headers).status_code == 403
+    for invalid in ({**draft, 'url': 'file:///etc/passwd'}, {**draft, 'authEnv': 'PATH'}, {**draft, 'extra': True}):
+        response = client.post('/api/data/preview', json=invalid, headers={'origin': ORIGIN})
+        assert response.status_code == 422
+        assert response.json() == {'error': 'invalid_configuration'}
+    assert not calls
+    before = client.get('/api/config').json()
+    response = client.post('/api/data/preview', json=draft, headers={'origin': ORIGIN})
+    assert response.status_code == 200
+    assert response.json()['value'] == {'count': 0}
+    assert calls[0].url == draft['url']
+    assert client.get('/api/config').json() == before
+
+
+def test_key_preview_matches_device_and_protects_remote_access(admin):
+    import io
+    from PIL import Image
+    from foxoe.device import key_image
+    client, _, _ = admin
+    value = {'label': 'Label Station', 'icon': 'printer', 'textSize': 32,
+             'textColor': '#12abcd', 'backgroundColor': '#123456', 'disabled': True}
+    params = {'key': json.dumps(value)}
+    assert client.get('/api/deck/preview', params=params).status_code == 401
+    login(client)
+    assert client.get('/api/deck/preview', params=params, headers={'origin': 'https://evil.test'}).status_code == 403
+    for invalid in ({**value, 'textSize': True}, {**value, 'textSize': 999}, {**value, 'label': 'a' * 61},
+                    {**value, 'image': '../../secret'}, {**value, 'icon': '../../secret'},
+                    {**value, 'backgroundColor': 'red'}, {**value, 'extra': True}):
+        response = client.get('/api/deck/preview', params={'key': json.dumps(invalid)})
+        assert response.status_code == 422
+        assert response.json() == {'error': 'invalid_configuration'}
+    assert client.get('/api/deck/preview', params={'key': '{'}).status_code == 422
+    assert client.get('/api/deck/preview', params={'key': 'x' * 2049}).status_code == 422
+    before = client.get('/api/config').json()
+    response = client.get('/api/deck/preview', params=params)
+    assert response.status_code == 200 and response.headers['content-type'] == 'image/png'
+    with Image.open(io.BytesIO(response.content)) as actual:
+        expected = key_image('Label Station', True, False, icon='printer', text_size=32,
+                             text_color='#12abcd', background_color='#123456')
+        assert actual.tobytes() == expected.tobytes()
+    assert client.get('/api/config').json() == before
+
+
 def test_malformed_login_rate_limit_expiry_and_recovery(admin, monkeypatch):
     client, gateway, _ = admin
     for content in ('[]', 'null', '{', '{"password":true}'):
@@ -137,6 +191,11 @@ def test_cancelled_login_keeps_hash_work_bounded_and_recovers(admin, monkeypatch
             finally:
                 release.set()
                 await asyncio.gather(*tasks, return_exceptions=True)
+                # Cancelled requests intentionally leave their hash worker
+                # running. Wait for that worker's cleanup, not just HTTP tasks.
+                async with asyncio.timeout(2):
+                    while gateway.active_logins:
+                        await asyncio.sleep(.01)
             assert gateway.active_logins == 0
             assert (await attempt()).status_code == 200
     asyncio.run(scenario())

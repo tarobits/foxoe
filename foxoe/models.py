@@ -23,6 +23,15 @@ class KeyColors(StrictModel):
     backgroundColor: Color | None = None
 
 
+class KeyPreview(KeyColors):
+    label: str = Field(default='', max_length=60)
+    icon: Icon | None = None
+    textSize: int = Field(default=14, ge=8, le=32, strict=True)
+    image: str | None = Field(default=None, pattern=r'^[a-f0-9]{64}$')
+    disabled: bool = Field(default=False, strict=True)
+    home: bool = Field(default=False, strict=True)
+
+
 class Application(KeyColors):
     id: str = Field(pattern=r"^[a-z][a-z0-9-]{0,39}$")
     name: str = Field(min_length=1, max_length=60)
@@ -64,6 +73,7 @@ class Application(KeyColors):
 
 
 class Configuration(StrictModel):
+    gridVersion: Literal[2] = 2
     revision: int = Field(default=0, ge=0)
     title: str = Field(default="FoxOE", min_length=1, max_length=60)
     locale: Literal["en", "de"] = "en"
@@ -71,9 +81,9 @@ class Configuration(StrictModel):
     apps: list[Application] = Field(default_factory=lambda: [Application(id="foxoe-demo", name="FoxOE Demo", url="/demo", icon="foxoe")], max_length=14)
     sources: list["DataSource"] = Field(default_factory=list, max_length=12)
     widgets: list["Widget"] = Field(default_factory=lambda: [
-        Widget(id="clock", kind="clock", x=0, y=0, w=5, h=2),
-        Widget(id="load", kind="value", source="system", path="load1", x=5, y=0, w=3, h=2),
-        Widget(id="memory", kind="value", source="system", path="memoryPercent", unit="%", x=8, y=0, w=4, h=2),
+        Widget(id="clock", kind="clock", x=0, y=0, w=10, h=4),
+        Widget(id="load", kind="value", source="system", path="load1", x=10, y=0, w=6, h=4),
+        Widget(id="memory", kind="value", source="system", path="memoryPercent", unit="%", x=16, y=0, w=8, h=4),
     ], max_length=24)
 
     @model_validator(mode="after")
@@ -86,8 +96,11 @@ class Configuration(StrictModel):
             raise ValueError("duplicate_widget_id")
         sources = {source.id for source in self.sources} | {"system"}
         for index, widget in enumerate(self.widgets):
-            if widget.kind in ("value", "list") and widget.source not in sources:
-                raise ValueError("unknown_source")
+            for element in [widget, *widget.items]:
+                if element.kind in ("value", "list") and element.source not in sources:
+                    raise ValueError("unknown_source")
+                if any(rule.source not in sources for rule in element.rules):
+                    raise ValueError("unknown_rule_source")
             for other in self.widgets[index + 1:]:
                 if widget.x < other.x + other.w and widget.x + widget.w > other.x and widget.y < other.y + other.h and widget.y + widget.h > other.y:
                     raise ValueError("overlapping_widgets")
@@ -131,24 +144,68 @@ class DataSource(StrictModel):
         return value
 
 
-class Widget(StrictModel):
+class WidgetRule(StrictModel):
+    source: str = Field(default='system', max_length=40)
+    path: str = Field(default='', max_length=200)
+    operator: Literal['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'contains', 'exists', 'missing', 'truthy', 'falsy'] = 'eq'
+    value: Annotated[str, Field(max_length=1000, strict=True)] | Annotated[bool, Field(strict=True)] | Annotated[float, Field(strict=True, allow_inf_nan=False)] | None = ''
+    target: Literal['textColor', 'backgroundColor', 'iconColor', 'visible'] = 'textColor'
+    color: Color | None = None
+    visible: bool = True
+
+
+class WidgetAppearance(StrictModel):
+    textColor: Color | None = None
+    backgroundColor: Color | None = None
+    iconColor: Color | None = None
+    fontSize: int | None = Field(default=None, ge=8, le=96, strict=True)
+    align: Literal['left', 'center', 'right'] = 'left'
+    rules: list[WidgetRule] = Field(default_factory=list, max_length=16)
+
+
+class WidgetContent(WidgetAppearance):
     id: str = Field(pattern=r"^[a-z][a-z0-9-]{0,39}$")
-    kind: Literal["clock", "text", "value", "list"] = "value"
+    kind: Literal["clock", "text", "value", "list", "icon"] = "value"
     title: str = Field(default="", max_length=60)
     text: str = Field(default="", max_length=1000)
     source: str = Field(default="system", max_length=40)
     path: str = Field(default="", max_length=200)
     itemPath: str = Field(default="", max_length=200)
     unit: str = Field(default="", max_length=12)
-    x: int = Field(default=0, ge=0, le=11, strict=True)
-    y: int = Field(default=0, ge=0, le=23, strict=True)
-    w: int = Field(default=4, ge=2, le=12, strict=True)
-    h: int = Field(default=2, ge=1, le=12, strict=True)
+    icon: Icon | None = 'window'
+
+
+class WidgetItem(WidgetContent):
+    row: int = Field(default=0, ge=0, le=5, strict=True)
+    column: int = Field(default=0, ge=0, le=5, strict=True)
+    rowSpan: int = Field(default=1, ge=1, le=6, strict=True)
+    columnSpan: int = Field(default=1, ge=1, le=6, strict=True)
+
+
+class Widget(WidgetContent):
+    kind: Literal['clock', 'text', 'value', 'list', 'icon', 'layout'] = 'value'
+    x: int = Field(default=0, ge=0, le=23, strict=True)
+    y: int = Field(default=0, ge=0, le=47, strict=True)
+    w: int = Field(default=8, ge=2, le=24, strict=True)
+    h: int = Field(default=4, ge=1, le=24, strict=True)
+    padding: int = Field(default=24, ge=0, le=48, strict=True)
+    gap: int = Field(default=8, ge=0, le=32, strict=True)
+    columns: list[Annotated[int, Field(ge=1, le=12, strict=True)]] = Field(default_factory=lambda: [1, 1], min_length=1, max_length=6)
+    rows: list[Annotated[int, Field(ge=1, le=12, strict=True)]] = Field(default_factory=lambda: [1], min_length=1, max_length=6)
+    items: list[WidgetItem] = Field(default_factory=list, max_length=24)
 
     @model_validator(mode="after")
     def bounds(self):
-        if self.x + self.w > 12 or self.y + self.h > 24:
+        if self.x + self.w > 24 or self.y + self.h > 48:
             raise ValueError("widget_out_of_bounds")
+        if len({item.id for item in self.items}) != len(self.items):
+            raise ValueError('duplicate_item_id')
+        for index, item in enumerate(self.items):
+            if item.row + item.rowSpan > len(self.rows) or item.column + item.columnSpan > len(self.columns):
+                raise ValueError('item_out_of_bounds')
+            for other in self.items[index + 1:]:
+                if item.column < other.column + other.columnSpan and item.column + item.columnSpan > other.column and item.row < other.row + other.rowSpan and item.row + item.rowSpan > other.row:
+                    raise ValueError('overlapping_items')
         return self
 
 

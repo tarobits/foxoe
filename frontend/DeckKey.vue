@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import Icon from './Icon.vue';
+import { computed } from 'vue';
 import type { DeckButton } from './types';
-defineProps<{ button?: DeckButton | null; home?: boolean }>();
+const props = defineProps<{ button?: DeckButton | null; home?: boolean }>();
+const source = computed(() => '/api/deck/preview?key=' + encodeURIComponent(JSON.stringify({
+  label: props.button?.label ?? '', icon: props.button?.icon ?? null,
+  textSize: props.button?.textSize ?? 14, image: props.button?.image ?? null,
+  disabled: props.button?.disabled ?? false, home: props.home ?? false,
+  textColor: props.button?.textColor ?? null, iconColor: props.button?.iconColor ?? null,
+  backgroundColor: props.button?.backgroundColor ?? null,
+})));
 </script>
 <template>
-  <div class="deck-key" :class="{ disabled: button?.disabled, 'home-key': home }" :style="{ backgroundColor: home ? '#4f46e5' : button?.backgroundColor || undefined }">
-    <img v-if="button?.image" :src="`/api/images/${button.image}`" alt="">
-    <span v-else-if="button?.icon === 'foxoe' && button.iconColor && !home" class="icon tinted-fox" :style="{ backgroundColor: button.iconColor }" />
-    <Icon v-else-if="button" :name="home ? 'home' : button.icon" :style="{ color: home ? undefined : button.iconColor || undefined }" />
-    <span :style="{ fontSize: `${button?.textSize ?? 14}px`, color: home ? undefined : button?.textColor || undefined }">{{ button?.label }}</span>
-  </div>
+  <div class="deck-key"><img :src="source" :alt="button?.label ?? ''" width="72" height="72"></div>
 </template>

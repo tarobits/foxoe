@@ -20,10 +20,25 @@ class Store:
         directory.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.path = directory / "foxoe.sqlite"
         with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
             db.execute("CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY CHECK(id=1), value TEXT NOT NULL)")
             db.execute("INSERT OR IGNORE INTO settings VALUES (1, ?)", (Configuration().model_dump_json(),))
             db.execute("CREATE TABLE IF NOT EXISTS app_credentials (id TEXT PRIMARY KEY, digest TEXT NOT NULL)")
             db.execute("CREATE TABLE IF NOT EXISTS images (digest TEXT PRIMARY KEY, data BLOB NOT NULL)")
+            # Migrate under the same transaction as initialization. A failed
+            # validation leaves the original JSON intact; updates back up this DB.
+            value = json.loads(db.execute('SELECT value FROM settings WHERE id=1').fetchone()[0])
+            if value.get('gridVersion', 1) == 1:
+                for widget in value.get('widgets', []):
+                    for field, default in (('x', 0), ('y', 0), ('w', 4), ('h', 2)):
+                        number = widget.get(field, default)
+                        if type(number) is not int:
+                            raise ValueError('invalid_legacy_grid')
+                        widget[field] = number * 2
+                value['gridVersion'] = 2
+                value['revision'] = value.get('revision', 0) + 1
+                migrated = Configuration.model_validate(value)
+                db.execute('UPDATE settings SET value=? WHERE id=1', (migrated.model_dump_json(),))
         self.path.chmod(0o600)
         # Exclusive creation never replaces an existing installation's credential.
         self.token = self.credential(directory / "bridge-token")

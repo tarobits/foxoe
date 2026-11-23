@@ -45,10 +45,12 @@ test('icon rendering handles null, full library, and hostile identifiers; picker
     const { default: DeckKey } = await server.ssrLoadModule('/frontend/DeckKey.vue');
     const button = { id: 'a', label: 'Color', icon: 'user', iconColor: '#ff0000', textColor: '#00ff00', backgroundColor: '#0000ff' };
     const preview = await renderToString(createSSRApp(DeckKey, { button }));
-    for (const color of ['#ff0000', '#00ff00', '#0000ff']) assert.ok(preview.includes(color));
+    const settings = markup => JSON.parse(decodeURIComponent(markup.match(/preview\?key=([^"]+)/)[1]));
+    assert.equal(settings(preview).iconColor, '#ff0000');
+    assert.equal(settings(preview).textColor, '#00ff00');
+    assert.equal(settings(preview).backgroundColor, '#0000ff');
     const home = await renderToString(createSSRApp(DeckKey, { button, home: true }));
-    assert.ok(home.includes('#4f46e5'));
-    assert.ok(!home.includes('#ff0000') && !home.includes('#0000ff'));
+    assert.equal(settings(home).home, true); // The device renderer enforces reserved Home colors.
   } finally {
     await server.close();
   }

@@ -2,6 +2,7 @@
 import asyncio
 import ipaddress
 import json
+import math
 import os
 import socket
 import time
@@ -50,21 +51,29 @@ class Sources:
 
     async def fetch(self, source):
         revision = self.controller.config.revision
+        entry = await self.preview(source)
+        if revision == self.controller.config.revision:
+            if entry['error']:
+                previous = self.cache.get(source.id, {})
+                entry.update(value=previous.get('value'), updatedAt=previous.get('updatedAt'))
+            self.cache[source.id] = entry
+            self.next_fetch[source.id] = (source.model_dump_json(), time.monotonic() + source.interval)
+
+    async def preview(self, source):
+        """Fetch an isolated snapshot without changing saved data or polling."""
         try:
             # Bound the whole operation, including DNS and a slow trickle of body
             # bytes, rather than resetting the deadline for every received chunk.
             async with asyncio.timeout(8):
-                await self._fetch(source)
+                return await self._fetch(source)
         except TimeoutError:
-            if revision == self.controller.config.revision:
-                previous = self.cache.get(source.id, {})
-                self.cache[source.id] = {"value": previous.get("value"), "error": "source_unavailable", "updatedAt": previous.get("updatedAt")}
-                self.next_fetch[source.id] = (source.model_dump_json(), time.monotonic() + source.interval)
+            return {"value": None, "error": "source_unavailable", "updatedAt": None}
 
     async def _fetch(self, source):
         async with self.semaphore:
-            revision = self.controller.config.revision
             try:
+                if self.client is None:
+                    raise ValueError('source_client_not_ready')
                 # Local/LAN endpoints are intentional for a self-hosted kiosk.
                 # Reject metadata/link-local destinations and never follow a
                 # redirect that could carry credentials to another service.
@@ -85,14 +94,19 @@ class Sources:
                         data.extend(chunk)
                         if len(data) > 262144:
                             raise ValueError("response_too_large")
-                    value = sanitize(json.loads(data), secret)
+                    def invalid_constant(value):
+                        raise ValueError('invalid_json_constant')
+                    def finite_number(value):
+                        number = float(value)
+                        if not math.isfinite(number):
+                            raise ValueError('invalid_json_number')
+                        return number
+                    value = sanitize(json.loads(data, parse_constant=invalid_constant, parse_float=finite_number), secret)
                 entry = {"value": value, "error": None, "updatedAt": time.time()}
             except (httpx.HTTPError, OSError, ValueError, RecursionError):
                 # Do not return upstream messages, request URLs or credential data.
-                entry = {"value": self.cache.get(source.id, {}).get("value"), "error": "source_unavailable", "updatedAt": self.cache.get(source.id, {}).get("updatedAt")}
-            if revision == self.controller.config.revision:
-                self.cache[source.id] = entry
-                self.next_fetch[source.id] = (source.model_dump_json(), time.monotonic() + source.interval)
+                entry = {"value": None, "error": "source_unavailable", "updatedAt": None}
+            return entry
 
     async def run(self):
         async with httpx.AsyncClient(trust_env=False) as client:
