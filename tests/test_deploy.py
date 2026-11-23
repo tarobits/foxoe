@@ -5,6 +5,9 @@ import os
 from pathlib import Path
 import subprocess
 import io
+import errno
+import shutil
+import sys
 import urllib.error
 
 import pytest
@@ -141,14 +144,62 @@ def test_build_failures_never_touch_running_release(installation, monkeypatch, f
     assert not calls
 
 
-def test_service_paths_are_quoted_and_injection_is_rejected(tmp_path):
+def test_service_paths_follow_systemd_directive_syntax_and_reject_injection(tmp_path):
     root = deploy.checked_path(str(tmp_path / 'with spaces'))
     unit = deploy.service_text(root)
-    assert f'WorkingDirectory="{root}/current"' in unit
+    # These directives consume a single literal path, unlike ExecStart's
+    # tokenized command line. Quotes become part of the path in systemd 252.
+    assert f'WorkingDirectory={root}/current\n' in unit
+    assert f'EnvironmentFile=-{root}/service.env\n' in unit
     assert f'--data-dir "{root}/data"' in unit
     for suffix in ('bad\nExecStart=evil', 'bad%h', 'bad${HOME}', 'bad"'):
         with pytest.raises(deploy.DeploymentError):
             deploy.checked_path(str(tmp_path / suffix))
+
+
+def test_first_activation_does_not_stop_a_service_that_has_never_started(tmp_path, monkeypatch):
+    candidate = tmp_path / 'releases/new'
+    candidate.mkdir(parents=True)
+    calls = []
+    def systemctl(*args, **kwargs):
+        calls.append(args)
+        if args == ('stop', deploy.UNIT):
+            raise subprocess.CalledProcessError(5, 'systemctl')
+    monkeypatch.setattr(deploy, 'systemctl', systemctl)
+    monkeypatch.setattr(deploy, 'healthy', lambda *_: None)
+    deploy.activate(tmp_path, candidate, {'version': 'v1.0.0'})
+    assert (tmp_path / 'current').resolve() == candidate
+    assert calls == [('start', deploy.UNIT)]
+
+
+def test_existing_service_stop_failure_aborts_before_data_or_release_changes(installation, monkeypatch):
+    root, old, new, config, _ = installation
+    def fail(*args, **kwargs):
+        raise subprocess.CalledProcessError(5, 'systemctl')
+    monkeypatch.setattr(deploy, 'systemctl', fail)
+    with pytest.raises(subprocess.CalledProcessError):
+        deploy.activate(root, new, config)
+    assert (root / 'current').resolve() == old
+    assert (root / 'data/config').read_text() == 'previous data'
+    assert not (root / 'pending.json').exists()
+
+
+@pytest.mark.skipif(not shutil.which('systemd-analyze'), reason='Requires the real Linux systemd unit parser')
+def test_generated_service_is_accepted_by_systemd(tmp_path):
+    root = tmp_path / 'runtime with spaces'
+    executable = root / 'current/.venv/bin/python'
+    executable.parent.mkdir(parents=True)
+    executable.symlink_to(sys.executable)
+    (root / 'logs').mkdir()
+    unit = tmp_path / 'foxoe.service'
+    valid = deploy.service_text(root)
+    unit.write_text(valid)
+    result = subprocess.run(['systemd-analyze', 'verify', str(unit)], text=True, capture_output=True)
+    assert result.returncode == 0, result.stderr
+    # Prove the real parser distinguishes the original invalid template.
+    unit.write_text(valid.replace(f'WorkingDirectory={root}/current', f'WorkingDirectory="{root}/current"'))
+    invalid = subprocess.run(['systemd-analyze', 'verify', str(unit)], text=True, capture_output=True)
+    assert invalid.returncode != 0
 
 
 def test_health_rejects_another_process_on_the_same_port(tmp_path, monkeypatch):
@@ -164,7 +215,7 @@ def test_health_rejects_another_process_on_the_same_port(tmp_path, monkeypatch):
     monkeypatch.setattr(deploy.time, 'sleep', lambda *_: None)
     monkeypatch.setattr(deploy, 'systemctl', lambda *a, **kw: '123')
     monkeypatch.setattr(deploy.urllib.request, 'build_opener', lambda *_: Client())
-    with pytest.raises(deploy.DeploymentError, match='healthy'):
+    with pytest.raises(deploy.DeploymentError, match='different process or release'):
         deploy.healthy(tmp_path, timeout=1)
 
 
@@ -316,6 +367,7 @@ def test_fresh_install_failure_cleans_unit_and_can_be_retried(tmp_path, monkeypa
     monkeypatch.setattr(deploy, 'published_release', lambda *a: release('v1.0.0'))
     monkeypatch.setattr(deploy, 'prerequisites', lambda *_: None)
     monkeypatch.setattr(deploy, 'build_environment', lambda *_: {})
+    monkeypatch.setattr(deploy, 'check_install_port', lambda: None)
     calls = []
     monkeypatch.setattr(deploy, 'systemctl', lambda *a, **kw: calls.append(a))
     def prepare(*args):
@@ -331,6 +383,8 @@ def test_fresh_install_failure_cleans_unit_and_can_be_retried(tmp_path, monkeypa
     assert not unit.exists()
     assert not (root / 'pending.json').exists()
     assert not (root / 'installation.json').exists()
+    assert (root / 'logs/service.log').is_file()
+    assert (root / 'logs/service.log').stat().st_mode & 0o777 == 0o600
     monkeypatch.setattr(deploy, 'healthy', lambda *_: None)
     deploy.main(command)
     assert unit.exists()
@@ -371,3 +425,56 @@ def test_unavailable_user_bus_has_actionable_error_and_allows_retry(monkeypatch)
         deploy.prerequisites()
     monkeypatch.setattr(deploy, 'systemctl', lambda *a, **kw: '')
     deploy.prerequisites()
+
+
+@pytest.mark.parametrize('error_code', [None, errno.EADDRINUSE, errno.EACCES])
+def test_port_probe_closes_socket_and_does_not_mask_other_errors(monkeypatch, error_code):
+    class Socket:
+        closed = False
+        def __enter__(self): return self
+        def __exit__(self, *_): self.closed = True
+        def setsockopt(self, *args): pass
+        def bind(self, address):
+            assert address == ('127.0.0.1', 8765)
+            if error_code:
+                raise OSError(error_code, 'test error')
+    probe = Socket()
+    monkeypatch.setattr(deploy.socket, 'socket', lambda *args: probe)
+    if error_code == errno.EADDRINUSE:
+        with pytest.raises(deploy.DeploymentError, match='already in use'):
+            deploy.check_install_port()
+    elif error_code:
+        with pytest.raises(OSError):
+            deploy.check_install_port()
+    else:
+        deploy.check_install_port()
+    assert probe.closed
+
+
+def test_busy_port_blocks_fresh_install_before_release_lookup_or_service_changes(tmp_path, monkeypatch):
+    monkeypatch.setattr(deploy.Path, 'home', lambda: tmp_path)
+    monkeypatch.setattr(deploy.platform, 'system', lambda: 'Linux')
+    monkeypatch.setattr(deploy.os, 'geteuid', lambda: 1000)
+    monkeypatch.setattr(deploy, 'check_install_port', lambda: (_ for _ in ()).throw(deploy.DeploymentError('already in use')))
+    monkeypatch.setattr(deploy, 'published_release', lambda *a: pytest.fail('Unexpected network lookup'))
+    monkeypatch.setattr(deploy, 'systemctl', lambda *a, **kw: pytest.fail('Must not stop another application'))
+    with pytest.raises(deploy.DeploymentError, match='already in use'):
+        deploy.main(['install', '--directory', str(tmp_path / 'runtime')])
+    assert not (tmp_path / 'runtime/current').exists()
+    assert not (tmp_path / '.config/systemd/user/foxoe.service').exists()
+
+
+def test_health_invalid_response_reports_diagnostics_without_echoing_content(tmp_path, monkeypatch):
+    class Client:
+        def open(self, *args, **kwargs):
+            return io.BytesIO(b'["private unrelated response"]')
+    ticks = iter([0, 0, 2])
+    monkeypatch.setattr(deploy.time, 'monotonic', lambda: next(ticks))
+    monkeypatch.setattr(deploy.time, 'sleep', lambda *_: None)
+    monkeypatch.setattr(deploy, 'systemctl', lambda *args, **kwargs: '123')
+    monkeypatch.setattr(deploy.urllib.request, 'build_opener', lambda *_: Client())
+    with pytest.raises(deploy.DeploymentError, match='invalid response') as raised:
+        deploy.healthy(tmp_path, timeout=1)
+    assert 'private unrelated response' not in str(raised.value)
+    assert 'within 1 seconds' in str(raised.value)
+    assert 'logs/service.log' in str(raised.value)

@@ -14,6 +14,8 @@ import platform
 import re
 import shutil
 import signal
+import socket
+import errno
 import subprocess
 import sys
 import tarfile
@@ -180,9 +182,11 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory="{root}/current"
+WorkingDirectory={root}/current
 ExecStart="{root}/current/.venv/bin/python" -m foxoe --data-dir "{root}/data"
-EnvironmentFile=-"{root}/service.env"
+EnvironmentFile=-{root}/service.env
+StandardOutput=append:{root}/logs/service.log
+StandardError=inherit
 Restart=on-failure
 RestartSec=3
 TimeoutStopSec=30
@@ -202,6 +206,18 @@ def prerequisites():
         systemctl('show-environment', capture=True)
     except subprocess.CalledProcessError:
         raise DeploymentError('The user service manager is unavailable. Log in directly as the kiosk user after administrator setup.') from None
+
+
+def check_install_port():
+    """Fail before downloading/building; never stop an unidentified listener."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            probe.bind(('127.0.0.1', 8765))
+        except OSError as error:
+            if error.errno == errno.EADDRINUSE:
+                raise DeploymentError("Port 127.0.0.1:8765 is already in use. Identify the listener with ss -ltnp 'sport = :8765' before retrying; no service was stopped.") from None
+            raise
 
 
 def build_environment(root):
@@ -290,20 +306,30 @@ def healthy(root, timeout=30):
     deadline = time.monotonic() + timeout
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     expected = str((root / 'current').resolve())
+    last_problem = 'the service has no running process'
     while time.monotonic() < deadline:
         try:
             pid = systemctl('show', UNIT, '--property=MainPID', '--value', capture=True)
+            last_problem = 'the service has no running process'
             if int(pid) > 0:
                 with opener.open('http://127.0.0.1:8765/api/health', timeout=2) as response:
                     status = json.load(response)
-                if status.get('pid') == int(pid) and status.get('release') == expected:
+                if not isinstance(status, dict):
+                    last_problem = 'the health endpoint returned an invalid response'
+                elif status.get('pid') == int(pid) and status.get('release') == expected:
                     with opener.open('http://127.0.0.1:8765/', timeout=2) as response:
                         if response.status == 200:
                             return
-        except (OSError, ValueError, subprocess.CalledProcessError):
-            pass
+                else:
+                    last_problem = 'port 8765 responded from a different process or release'
+        except urllib.error.HTTPError as error:
+            last_problem = f'the HTTP check returned status {error.code}'
+        except (OSError, ValueError, subprocess.CalledProcessError) as error:
+            # Response bodies/exception text may contain unrelated applications'
+            # data. Report only the failure category and the private log path.
+            last_problem = f'the health check failed ({type(error).__name__})'
         time.sleep(.5)
-    raise DeploymentError('FoxOE did not become healthy within 30 seconds.')
+    raise DeploymentError(f'FoxOE did not become healthy within {timeout:g} seconds: {last_problem}. Service output: {root}/logs/service.log')
 
 
 def recover(root):
@@ -344,7 +370,10 @@ def activate(root, release, config):
     old_config = json.loads(config_path.read_text()) if config_path.exists() else None
     backup = root / 'backups' / uuid.uuid4().hex
     backup.mkdir(parents=True)
-    systemctl('stop', UNIT)
+    # Fresh installs have no previous service to stop. Updates must still fail
+    # closed if stopping the running service fails, before touching its data.
+    if previous:
+        systemctl('stop', UNIT)
     try:
         had_data = (root / 'data').exists()
         if had_data:
@@ -405,6 +434,8 @@ def main(argv=None):
             raise DeploymentError('No managed installation found. Run install.sh first.')
         if args.action == 'update' and (not (root / 'current').is_symlink() or not unit.exists()):
             raise DeploymentError('Managed release or service is missing. Repair the installation before updating.')
+        if not installed:
+            check_install_port()
         config = json.loads((root / 'installation.json').read_text()) if installed else {'repository': args.repository}
         channel = args.channel or config.get('channel', 'stable')
         try:
@@ -432,6 +463,9 @@ def main(argv=None):
         created_unit = False
         try:
             if not installed:
+                logs = root / 'logs'
+                logs.mkdir(exist_ok=True, mode=0o700)
+                (logs / 'service.log').touch(mode=0o600, exist_ok=True)
                 unit.parent.mkdir(parents=True, exist_ok=True)
                 with open(unit, 'x') as output:
                     created_unit = True

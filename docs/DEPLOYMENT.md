@@ -56,6 +56,7 @@ The managed installation defaults to `~/.local/share/foxoe`:
 | `data/` | Persistent dashboard configuration, images, and credentials |
 | `installation.json` | Repository, installed version/commit, and update channel |
 | `backups/` | Data snapshots made while the service is stopped |
+| `logs/service.log` | Service output retained across failed fresh installations |
 | `service.env` | Optional operator-managed environment variables |
 | `pending.json` | Recovery journal during an activation |
 
@@ -64,8 +65,10 @@ do not import a developer checkout's `data/` automatically. Keep manual and mana
 installations separate; only one service can occupy port 8765.
 
 The generated unit is `~/.config/systemd/user/foxoe.service`. It runs without root,
-uses a private umask, and restarts on failure. Use `systemctl --user status foxoe`
-and `journalctl --user -u foxoe` for service diagnostics. After the initial USB
+uses a private umask, and restarts on failure. Newly generated units write service
+output to `logs/service.log`, readable by the kiosk account without journal-group
+membership. Use `systemctl --user status foxoe` for systemd status. Existing units
+that still use journald may require an administrator to read their logs. After the initial USB
 setup, reboot once and reconnect the Stream Deck so group membership is applied.
 
 ## Updates and channels
@@ -119,6 +122,17 @@ If `current` is unavailable after a failed first install, run the same command
 from the original source folder instead. The activation journal stays present
 when recovery itself fails, so a later retry can restore the saved data. Correct
 the underlying disk/service issue first and inspect the service journal.
+
+Fresh installation checks that `127.0.0.1:8765` is free before downloading or
+building. If it is occupied, identify its owner with `ss -ltnp 'sport = :8765'`
+(an administrator may need to run this with `sudo` to see another user's process).
+FoxOE never stops an unrelated listener automatically. Stop or reconfigure that
+application before retrying installation.
+
+If startup fails, read `logs/service.log` from the runtime directory. Health-check
+errors include their last observed failure category. Logs survive rollback and
+are not automatically rotated; monitor their size. Systemd errors before the
+application starts may still require an administrator to inspect the journal.
 
 Old releases, data snapshots, and `failed-data-*` directories are retained for
 inspection. They can contain private credentials and are stored under the private
