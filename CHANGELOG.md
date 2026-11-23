@@ -7,6 +7,21 @@ GitHub release tags use the `v` prefix, for example `v1.0.0`.
 
 ## [Unreleased]
 
+## [0.1.0-pre4] - 2026-11-23
+
+**Test version / proof of concept.** These changes still require validation on
+the physical Raspberry Pi and Stream Deck setup.
+
+### Added
+
+- Text-only app launchers and Stream Deck buttons using `icon: null` or the dashboard's No icon option.
+- Per-key text sizes from 8 to 32 pixels, configurable through application registration, live button updates, and launcher settings. The default remains 14 pixels.
+- The complete Heroicons outline collection with searchable selection in dashboard settings; existing icon names remain supported.
+
+### Changed
+
+- Stream Deck labels wrap and truncate with an ellipsis to fit the selected text size; larger text reduces the space available for its icon.
+
 ## [0.1.0-pre3] - 2026-11-23
 
 **Test version / proof of concept.** Target hardware and live Chromium integration
@@ -50,7 +65,8 @@ extension session have not yet been validated on the target setup.
 - English and German interfaces.
 - Raspberry Pi OS/Debian installation and updates from published GitHub releases, with remembered stable/beta channels, data preservation, and recovery after a failed activation.
 
-[Unreleased]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre3...main
+[Unreleased]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre4...main
+[0.1.0-pre4]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre3...v0.1.0-pre4
 [0.1.0-pre3]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre2...v0.1.0-pre3
 [0.1.0-pre2]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre1...v0.1.0-pre2
 [0.1.0-pre1]: https://github.com/tarobits/foxoe/releases/tag/v0.1.0-pre1

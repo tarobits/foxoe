@@ -4,7 +4,7 @@ A local kiosk dashboard for a Raspberry Pi 3B+ and 1024×600 touchscreen, with a
 permanent application dock and an Elgato Stream Deck MK.2 that follows the active
 browser application.
 
-**v0.1.0-pre3 is a test version and proof of concept**, intended for experimentation
+**v0.1.0-pre4 is a test version and proof of concept**, intended for experimentation
 rather than production use. Target hardware and live Chromium integration still
 need validation. Install this prerelease with `bash install.sh --channel beta`.
 
@@ -16,7 +16,7 @@ need validation. Install this prerelease with `bash install.sh --channel beta`.
 - Chromium integration for one selected kiosk tab, same-tab navigation, and Home.
 - App-defined Stream Deck layouts, named screens, temporary keypad layouts, and
   individual button updates.
-- Built-in action icons and a house icon on Stream Deck keys, plus application-uploaded launcher and button artwork.
+- The full Heroicons outline library, text-only keys, per-key text sizes, and application-uploaded launcher and button artwork. Home keeps its house icon.
 - Automatic app registration with a setup credential, per-app update credentials,
   and PNG/JPEG/WebP button images.
 - English and German interfaces, saved configuration, revision conflict detection,
@@ -181,8 +181,8 @@ npm test          # SDK, routing, data paths, grid boundaries, locale tests
 .venv/bin/python -m pytest -q
 ```
 
-The frontend build also generates the extension's fox icons and the Stream Deck
-icon assets from the supplied vectors. Run `npm run build:icons` when working on
+The frontend build also generates the extension's fox icons, the dashboard's SVG
+sprite, and the Stream Deck icon assets from the supplied vectors. Run `npm run build:icons` when working on
 those assets alone. Rasterization is build-time only; the Pi service uses Pillow.
 
 Use the built service at port 8765 for browser-extension integration. The Vite
