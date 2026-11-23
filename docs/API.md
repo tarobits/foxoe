@@ -226,8 +226,8 @@ overlap. Supported item
 kinds are `text`, `value`, `list`, `clock`, and `icon`; nested layouts are rejected.
 
 Each rule compares `source` and `path` using an `operator`, with a typed scalar
-`value`, and changes one `target` (`textColor`, `iconColor`, `backgroundColor`, or
-`visible`) using `color` or `visible`. For example:
+`value`. Existing single-action rules change one `target` (`textColor`,
+`iconColor`, `backgroundColor`, or `visible`) using `color` or `visible`. For example:
 
 ```json
 {"source":"system","path":"memoryPercent","operator":"gte","value":80,
@@ -241,6 +241,32 @@ numbers. `exists` excludes missing and null values; `missing` matches both.
 matches false, zero, empty strings, and null. Missing paths otherwise do not
 match. Unavailable or stale sources never trigger rules. Rules run in order,
 with the last matching rule winning for each property. No code is evaluated.
+
+Supply `actions` to apply multiple changes under one condition (1–16 actions).
+When supplied, this list replaces the legacy top-level `target`/`color`/`visible`
+action. Omitting it or setting it to null preserves the legacy action.
+
+```json
+{
+  "source": "system", "path": "memoryPercent", "operator": "gte", "value": 80,
+  "actions": [
+    {"target": "text", "text": "Memory is nearly full"},
+    {"target": "title", "text": "Attention"},
+    {"target": "backgroundColor", "color": "#7f1d1d"},
+    {"target": "visible", "visible": true}
+  ]
+}
+```
+
+Color actions use `color` (`#RRGGBB` or null); visibility uses a strict boolean
+`visible`. Text and title actions use literal `text` (up to 1,000 or 60 characters,
+respectively), escaped for display. Empty strings are valid replacements. Text
+actions are available for `text` and `value` widgets/items; replacement values
+omit the configured unit. Title actions work on all kinds and respect
+`showTitle`. Matching actions run in list order; the last change to each property
+wins across actions and rules. Base content is never changed and returns as soon
+as no matching action overrides it. Unavailable condition sources disable the
+entire rule. Multiple actions also work with nested `condition` groups below.
 
 For combined logic, supply `condition` on the rule. It replaces the rule's
 top-level comparison fields; omitting it (or setting it to null) retains the
@@ -273,3 +299,19 @@ below the root. All referenced sources must exist. If any referenced source is
 unavailable, the entire rule does not apply, including negated rules. On an
 available source, NOT inverts the comparison result; use `exists` when a field
 must be present. These conditions work on both widgets and their individual items.
+
+### Local Stream Deck power control
+
+`GET /api/deck/power` returns the requested `enabled` state, device connection
+status in `device`, and effective brightness in `brightness`. `PUT` accepts
+`{"enabled": false}` or `{"enabled": true}` and requires
+`Origin: http://127.0.0.1:8765`, like other local writes. This endpoint is available
+only through the loopback service, not the network administration or app
+registration gateways. The `foxoe deck on|off|status` CLI uses this endpoint.
+
+Off persists in the database, sets brightness to zero, and suppresses key events.
+On restores configured brightness and the current layout. Configuration changes
+do not turn the device back on. USB updates are applied asynchronously; an
+accepted command is retained if the device is disconnected. Failed persistence
+returns 503 without changing the controller state. Invalid bodies return 422.
+`GET /api/state` also includes `deviceEnabled`.

@@ -54,7 +54,7 @@ The managed installation defaults to `~/.local/share/foxoe`:
 | `current` | Symlink to the active release |
 | `extension/` | Stable unpacked extension directory, updated and restored with the service |
 | `releases/` | Separate source, Python environment, and frontend build per deployment |
-| `data/` | Persistent dashboard configuration, images, and credentials |
+| `data/` | Persistent dashboard configuration, Stream Deck power state, images, and credentials |
 | `installation.json` | Repository, installed version/commit, and update channel |
 | `backups/` | Data snapshots made while the service is stopped |
 | `logs/service.log` | Service output retained across failed fresh installations |
@@ -236,6 +236,11 @@ Python, and `## [1.1.0-beta.1] - YYYY-MM-DD` in the changelog. Mark the GitHub r
 as a prerelease. The installer checks package versions and the dated changelog
 entry before installing dependencies. Publishing remains a separate explicit
 maintainer action; these scripts never commit, tag, push, or publish.
+
+The `0.1.0` series uses `v0.1.0-preview.10` after `v0.1.0-pre9`, followed by
+`v0.1.0-preview.11`, and so on. Keep the counter as a separate numeric identifier:
+SemVer sorts `pre10` before `pre9`, whereas `preview.10` follows `pre9` and future
+`preview.N` tags sort numerically.
 
 Only document exceptional manual upgrade requirements in a release's notes,
 such as a breaking configuration change or restricted rollback. Ordinary service

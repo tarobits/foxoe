@@ -90,6 +90,21 @@ See [deployment options and recovery](docs/DEPLOYMENT.md) and the
 
 ## Raspberry Pi USB and kiosk setup
 
+Control the Stream Deck through the running service, without sudo:
+
+```sh
+~/.local/share/foxoe/current/.venv/bin/foxoe deck off
+~/.local/share/foxoe/current/.venv/bin/foxoe deck on
+~/.local/share/foxoe/current/.venv/bin/foxoe deck status
+```
+
+`off` sets brightness to zero and ignores key presses until `on` restores the
+configured brightness. The setting persists across service restarts and USB
+reconnections. Status reports the requested on/off state and device connection;
+disconnected devices receive the setting when they reconnect. The service must
+be running. With FoxOE's Python environment activated, use `foxoe deck off`
+(or `on` / `status`) directly.
+
 For manual installation, install `libhidapi-libusb0` and `fonts-dejavu-core` through the Pi's package manager.
 The former provides USB access; the latter provides readable key labels. Run FoxOE
 as an ordinary account, with USB access through the supplied
@@ -147,8 +162,12 @@ items; later items appear above earlier ones. Dashboard widgets still cannot
 overlap. Icons shrink to fit their cells when rows or columns become smaller.
 **Appearance** controls text, icon, and background colors, text size, alignment,
 padding, and item spacing. Leave a title blank or disable **Show title** to display
-only the content, including for individual items. **Rules** compare live data fields with typed values to
-change colors or visibility, for the whole widget or individual items. Use
+only the content, including for individual items. **Rules** compare live data fields
+with typed values. Each rule can apply multiple actions to change colors,
+visibility, titles, and displayed text or values. Use **Add action** to combine
+changes under one condition. Replacement text temporarily replaces a text item's
+content or a value (including its unit); the original returns when the rule no
+longer matches. Title actions still respect **Show title**. Use
 **Combine** to nest AND/OR groups, and **NOT** to invert a condition or group.
 For example, an OR group can contain an AND group and a negated condition:
 `(condition1 AND condition2) OR NOT condition3`. Matching
