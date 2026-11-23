@@ -16,10 +16,10 @@ from fastapi.responses import JSONResponse, Response
 from PIL import Image, ImageOps, UnidentifiedImageError
 from pydantic import Field, ValidationError
 
-from .models import Application, Layout, StrictModel, Icon
+from .models import Application, Layout, KeyColors, Icon
 
 
-class Manifest(StrictModel):
+class Manifest(KeyColors):
     schemaVersion: int = Field(default=1, ge=1, le=1)
     id: str = Field(pattern=r"^[a-z][a-z0-9-]{0,39}$")
     name: str = Field(min_length=1, max_length=60)
@@ -65,6 +65,7 @@ def prepare_manifest(manifest: Manifest):
         images[name] = digest
         assets[digest] = png
     app = Application(id=manifest.id, name=manifest.name, url=manifest.url, icon=manifest.icon, textSize=manifest.textSize,
+                      iconColor=manifest.iconColor, textColor=manifest.textColor, backgroundColor=manifest.backgroundColor,
                       image=manifest.image, images=images, screens=manifest.screens)
     if app.url.startswith("/"):
         raise ValueError("absolute_url_required")

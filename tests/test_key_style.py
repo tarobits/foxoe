@@ -37,3 +37,21 @@ def test_omitted_style_preserves_defaults():
     button = Button(id='a', label='A')
     assert button.icon == 'window'
     assert button.textSize == 14
+
+
+@pytest.mark.parametrize('field', ['iconColor', 'textColor', 'backgroundColor'])
+def test_color_validation_and_atomic_updates(field):
+    app = Application(id='app', name='App', url='https://example.test', **{field: '#12aBcF'})
+    controller = Controller(Configuration(apps=[app]), 'http://127.0.0.1:8765')
+    controller.connect('browser')
+    controller.context('browser', 'home', 'http://127.0.0.1:8765/')
+    assert controller.buttons()[0][field] == '#12aBcF'
+    controller.context('browser', 'doc', app.url)
+    controller.layout('browser', 'doc', 'show', {'id': 'main', 'buttons': [{'id': 'a', 'label': 'A', field: '#123456'}]})
+    before = controller.state()
+    for invalid in ['red', '#fff', '#12345678', 'url(https://evil.test)', '#gggggg', '', 0, True, []]:
+        with pytest.raises(ValidationError):
+            controller.layout('browser', 'doc', 'update', {'id': 'a', 'changes': {field: invalid}})
+        assert controller.state() == before
+    controller.layout('browser', 'doc', 'update', {'id': 'a', 'changes': {field: None}})
+    assert controller.buttons()[0][field] is None

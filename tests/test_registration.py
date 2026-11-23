@@ -163,12 +163,13 @@ def test_revocation_between_authorization_and_commit_cannot_overwrite_new_owner(
 def test_registration_preserves_null_icons_sizes_and_updates_after_restart(registration):
     from foxoe.store import Store
     client, local = registration
-    value = {**manifest(), 'icon': None, 'image': None, 'textSize': 28,
+    value = {**manifest(), 'icon': None, 'image': None, 'textSize': 28, 'backgroundColor': '#123456', 'textColor': '#fedcba', 'iconColor': '#abcdef',
              'screens': [{'id': 'main', 'buttons': [{'id': 'a', 'label': '42', 'icon': None, 'textSize': 32}]}]}
     response = client.post('/v1/apps', json=value, headers={'Authorization': 'Bearer ' + local.state.store.registration_token})
     assert response.status_code == 201
     stored = next(app for app in local.state.store.load().apps if app.id == 'printer')
     assert stored.icon is None and stored.textSize == 28
+    assert (stored.iconColor, stored.textColor, stored.backgroundColor) == ('#abcdef', '#fedcba', '#123456')
     assert stored.screens[0].buttons[0].icon is None
     assert stored.screens[0].buttons[0].textSize == 32
     key = response.json()['appCredential']

@@ -138,3 +138,20 @@ def test_text_only_sizes_wrap_within_key_and_keep_home_reserved():
             assert 4 <= box[1] < box[3] <= 68
     assert key_image('Home', False, True, icon=None).tobytes() == key_image('Home', False, True, icon='home').tobytes()
     assert key_image('42', True, False, icon=None, text_size=32).tobytes() != large.tobytes()
+
+
+def test_key_colors_tint_without_mutating_cached_icons_or_uploaded_artwork():
+    original = key_image('A', False, False, icon='user').tobytes()
+    colored = key_image('A', False, False, icon='user', icon_color='#ff0000', text_color='#00ff00', background_color='#0000ff')
+    assert colored.getpixel((0, 0)) == (0, 0, 255)
+    assert any(r > 200 and g < 20 for count, (r, g, b) in colored.crop((18, 4, 54, 40)).getcolors(72 * 72))
+    assert any(g > 200 and r < 20 for count, (r, g, b) in colored.crop((4, 43, 68, 68)).getcolors(72 * 72))
+    assert key_image('A', False, False, icon='user').tobytes() == original
+    assert key_image('Home', False, True, icon_color='#ff0000', background_color='#000000').tobytes() == key_image('Home', False, True).tobytes()
+    png = io.BytesIO()
+    artwork = Image.new('RGBA', (72, 72), (0, 0, 0, 0))
+    artwork.putpixel((36, 36), (10, 20, 30, 255))
+    artwork.save(png, 'PNG')
+    custom = key_image('A', False, False, png.getvalue(), icon_color='#ff0000', background_color='#00ff00')
+    assert custom.getpixel((36, 36)) == (10, 20, 30)
+    assert custom.getpixel((0, 0)) == (0, 255, 0)

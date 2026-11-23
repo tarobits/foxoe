@@ -1,5 +1,5 @@
 """Validate configuration and app-supplied controls before changing live state."""
-from typing import Literal
+from typing import Annotated, Literal
 import json
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -14,7 +14,16 @@ class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
 
-class Application(StrictModel):
+Color = Annotated[str, Field(pattern=r'^#[0-9a-fA-F]{6}$', min_length=7, max_length=7, strict=True)]
+
+
+class KeyColors(StrictModel):
+    iconColor: Color | None = None
+    textColor: Color | None = None
+    backgroundColor: Color | None = None
+
+
+class Application(KeyColors):
     id: str = Field(pattern=r"^[a-z][a-z0-9-]{0,39}$")
     name: str = Field(min_length=1, max_length=60)
     url: str = Field(min_length=1, max_length=2048)
@@ -85,7 +94,7 @@ class Configuration(StrictModel):
         return self
 
 
-class Button(StrictModel):
+class Button(KeyColors):
     id: str = Field(min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_.:-]+$")
     label: str = Field(min_length=1, max_length=32)
     icon: Icon | None = "window"

@@ -5,7 +5,7 @@ import io
 from functools import lru_cache
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont, ImageEnhance
+from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageColor
 
 from .controller import Controller
 from .models import ICON_NAMES
@@ -22,10 +22,13 @@ def builtin_icon(name):
 
 
 @lru_cache(maxsize=128)
-def key_image(label: str, disabled: bool, home: bool, png: bytes | None = None, *, icon: str | None = 'window', text_size: int = 14):
+def key_image(label: str, disabled: bool, home: bool, png: bytes | None = None, *, icon: str | None = 'window', text_size: int = 14,
+              icon_color: str | None = None, text_color: str | None = None, background_color: str | None = None):
     if type(text_size) is not int or not 8 <= text_size <= 32:
         raise ValueError('invalid_text_size')
-    image = Image.new("RGB", (72, 72), "#4f46e5" if home else "#1f2937")
+    if home:
+        icon_color = text_color = background_color = None
+    image = Image.new("RGB", (72, 72), "#4f46e5" if home else background_color or "#1f2937")
     if png:
         with Image.open(io.BytesIO(png)) as asset:
             overlay = asset.convert("RGBA")
@@ -36,6 +39,10 @@ def key_image(label: str, disabled: bool, home: bool, png: bytes | None = None, 
     if symbol is not None:
         symbol_size = min(36, 62 - text_size - 2)
         symbol = symbol.resize((symbol_size, symbol_size), Image.Resampling.LANCZOS)
+        if icon_color:
+            tinted = Image.new('RGBA', symbol.size, icon_color)
+            tinted.putalpha(symbol.getchannel('A'))
+            symbol = tinted
         if disabled:
             symbol = ImageEnhance.Brightness(symbol).enhance(0.45)
         image.paste(symbol, ((72 - symbol_size) // 2, 4), symbol)
@@ -69,10 +76,13 @@ def key_image(label: str, disabled: bool, home: bool, png: bytes | None = None, 
     # overlap the icon or escape the key. Keep the selected size, not auto-shrink.
     text_layer = Image.new('RGBA', (64, 68 - text_top))
     text_draw = ImageDraw.Draw(text_layer)
+    ink = text_color or '#ffffff'
+    if disabled:
+        ink = tuple(int(channel * .45) for channel in ImageColor.getrgb(text_color)) if text_color else '#9ca3af'
     for index, text in enumerate(lines):
         y = text_layer.height / 2 + (index - (len(lines) - 1) / 2) * line_height
         text_draw.text((32, y), text,
-                  font=font, fill="#9ca3af" if disabled else "#ffffff", anchor="mm")
+                  font=font, fill=ink, anchor="mm")
     image.paste(text_layer, (4, text_top), text_layer)
     return image
 
@@ -138,7 +148,10 @@ class DeviceWorker:
                             png = self.image_loader(button["image"]) if button and button.get("image") else None
                             image = key_image(button["label"] if button else "", bool(button and button["disabled"]), index == 14, png,
                                               icon=button["icon"] if button else None,
-                                              text_size=button.get('textSize', 14) if button else 14)
+                                              text_size=button.get('textSize', 14) if button else 14,
+                                              icon_color=button.get('iconColor') if button else None,
+                                              text_color=button.get('textColor') if button else None,
+                                              background_color=button.get('backgroundColor') if button else None)
                             deck.set_key_image(index, PILHelper.to_native_key_format(deck, image))
                         self.rendered_generation = generation
                         previous = snapshot
