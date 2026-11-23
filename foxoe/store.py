@@ -25,6 +25,8 @@ class Store:
             db.execute("INSERT OR IGNORE INTO settings VALUES (1, ?)", (Configuration().model_dump_json(),))
             db.execute("CREATE TABLE IF NOT EXISTS app_credentials (id TEXT PRIMARY KEY, digest TEXT NOT NULL)")
             db.execute("CREATE TABLE IF NOT EXISTS images (digest TEXT PRIMARY KEY, data BLOB NOT NULL)")
+            db.execute('CREATE TABLE IF NOT EXISTS device_state (id INTEGER PRIMARY KEY CHECK(id=1), enabled INTEGER NOT NULL CHECK(enabled IN (0,1)))')
+            db.execute('INSERT OR IGNORE INTO device_state VALUES (1, 1)')
             # Migrate under the same transaction as initialization. A failed
             # validation leaves the original JSON intact; updates back up this DB.
             value = json.loads(db.execute('SELECT value FROM settings WHERE id=1').fetchone()[0])
@@ -68,6 +70,16 @@ class Store:
     def load(self) -> Configuration:
         with self.connect() as db:
             return Configuration.model_validate_json(db.execute("SELECT value FROM settings WHERE id=1").fetchone()[0])
+
+    def deck_enabled(self) -> bool:
+        with self.connect() as db:
+            return bool(db.execute('SELECT enabled FROM device_state WHERE id=1').fetchone()[0])
+
+    def set_deck_enabled(self, enabled: bool):
+        if type(enabled) is not bool:
+            raise ValueError('invalid_deck_power')
+        with self.connect() as db:
+            db.execute('UPDATE device_state SET enabled=? WHERE id=1', (int(enabled),))
 
     def save(self, config: Configuration) -> Configuration:
         with self.connect() as db:

@@ -103,13 +103,13 @@ class DeviceWorker:
         self.image_loader = image_loader
         self.stop = threading.Event()
         self.lock = threading.Lock()
-        self.snapshot = ([], -1, 65)
+        self.snapshot = ([], -1, 65, True)
         self.rendered_generation = -1
         self.thread = threading.Thread(target=self.run, name="foxoe-usb", daemon=True)
 
     def update(self):
         with self.lock:
-            self.snapshot = (self.controller.buttons(), self.controller.generation, self.controller.config.brightness)
+            self.snapshot = (self.controller.buttons(), self.controller.generation, self.controller.config.brightness, self.controller.device_enabled)
 
     def status(self, value: str):
         self.loop.call_soon_threadsafe(self.controller.held.clear)
@@ -147,12 +147,13 @@ class DeviceWorker:
                     with self.lock:
                         snapshot = self.snapshot
                     if snapshot != previous:
-                        buttons, generation, brightness = snapshot
+                        buttons, generation, brightness, enabled = snapshot
                         self.rendered_generation = -1
-                        deck.set_brightness(brightness)
-                        for index, button in enumerate(buttons):
+                        if not enabled:
+                            deck.set_brightness(0)
+                        for index, button in enumerate(buttons if enabled else []):
                             old = previous[0][index] if previous and len(previous[0]) > index else None
-                            if previous and button == old:
+                            if previous and previous[3] and button == old:
                                 continue
                             png = self.image_loader(button["image"]) if button and button.get("image") else None
                             image = key_image(button["label"] if button else "", bool(button and button["disabled"]), index == 14, png,
@@ -162,7 +163,9 @@ class DeviceWorker:
                                               text_color=button.get('textColor') if button else None,
                                               background_color=button.get('backgroundColor') if button else None)
                             deck.set_key_image(index, PILHelper.to_native_key_format(deck, image))
-                        self.rendered_generation = generation
+                        if enabled:
+                            deck.set_brightness(brightness)
+                            self.rendered_generation = generation
                         previous = snapshot
                     self.stop.wait(0.15)
                 except Exception:

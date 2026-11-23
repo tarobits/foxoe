@@ -23,6 +23,13 @@ class Controller:
         self.generation = 0
         self.held: set[int] = set()
         self.device = "disconnected"
+        self.device_enabled = True
+
+    def set_device_enabled(self, enabled: bool):
+        if enabled != self.device_enabled:
+            self.device_enabled = enabled
+            self.generation += 1
+            self.held.clear()
 
     def connect(self, owner: str) -> asyncio.Queue:
         if self.owner is not None:
@@ -139,6 +146,8 @@ class Controller:
         return result
 
     def press(self, index: int, down: bool, generation: int):
+        if not self.device_enabled:
+            return
         if not down:
             self.held.discard(index)
             return
@@ -157,4 +166,5 @@ class Controller:
 
     def state(self):
         return {"connected": bool(self.owner), "device": self.device, "activeApp": self.app_id,
+                "deviceEnabled": self.device_enabled,
                 "home": self.home, "generation": self.generation, "configRevision": self.config.revision, "buttons": self.buttons()}

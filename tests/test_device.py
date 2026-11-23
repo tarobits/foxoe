@@ -80,6 +80,79 @@ def test_registered_image_is_rendered_at_key_size_and_dimmed():
     assert disabled.getpixel((30, 30))[0] < normal.getpixel((30, 30))[0]
 
 
+def test_off_sets_zero_brightness_ignores_keys_and_on_restores_latest_layout(monkeypatch):
+    manager_module=importlib.import_module('StreamDeck.DeviceManager')
+    helper=importlib.import_module('StreamDeck.ImageHelpers.PILHelper')
+    controller=Controller(Configuration(),'http://127.0.0.1:8765')
+    queue=controller.connect('browser'); controller.context('browser','doc','http://127.0.0.1:8765/')
+    controller.set_device_enabled(False)
+    worker=DeviceWorker(controller,ImmediateLoop()); worker.update()
+    class Deck:
+        closed=False
+        brightness=[]
+        writes=[]
+        def is_visual(self): return True
+        def key_count(self): return 15
+        def open(self): pass
+        def reset(self): pass
+        def connected(self): return True
+        def set_key_callback(self, callback): self.callback=callback
+        def set_brightness(self, value): self.brightness.append(value)
+        def set_key_image(self,index,image): self.writes.append(index)
+        def close(self): self.closed=True
+    deck=Deck()
+    class Stop(NoWaitStop):
+        def wait(self,timeout):
+            self.ticks+=1
+            if self.ticks==1:
+                assert deck.brightness==[0] and not deck.writes
+                deck.callback(deck,0,True); assert queue.empty()
+                controller.config.brightness=23; worker.update()
+            elif self.ticks==2:
+                assert deck.brightness==[0,0] and not deck.writes
+                controller.set_device_enabled(True); worker.update()
+            else:
+                assert deck.brightness[-1]==23 and deck.writes==list(range(15))
+                deck.callback(deck,0,False); deck.callback(deck,0,True)
+                assert queue.get_nowait()['type']=='launch'
+                self.set()
+    worker.stop=Stop()
+    monkeypatch.setattr(manager_module.DeviceManager,'_get_transport',staticmethod(lambda name:None))
+    monkeypatch.setattr(manager_module.DeviceManager,'enumerate',lambda self:[deck])
+    monkeypatch.setattr(helper,'to_native_key_format',lambda deck,image:image)
+    worker.run()
+    assert deck.closed and worker.stop.ticks==3
+
+
+def test_failed_brightness_write_reconnects_without_waking_device(monkeypatch):
+    manager=importlib.import_module('StreamDeck.DeviceManager')
+    controller=Controller(Configuration(),'http://127.0.0.1:8765')
+    controller.set_device_enabled(False)
+    worker=DeviceWorker(controller,ImmediateLoop()); worker.stop=NoWaitStop(); worker.update()
+    calls=[]
+    class Deck:
+        closed=False
+        def __init__(self,fail): self.fail=fail
+        def is_visual(self): return True
+        def key_count(self): return 15
+        def open(self): pass
+        def reset(self): pass
+        def connected(self): return True
+        def set_key_callback(self,callback): pass
+        def set_brightness(self,value):
+            calls.append(value)
+            if self.fail: raise OSError('synthetic USB failure')
+            worker.stop.set()
+        def close(self): self.closed=True
+    first,second=Deck(True),Deck(False)
+    devices=iter([first,second])
+    monkeypatch.setattr(manager.DeviceManager,'_get_transport',staticmethod(lambda name:None))
+    monkeypatch.setattr(manager.DeviceManager,'enumerate',lambda self:[next(devices)])
+    worker.run()
+    assert calls==[0,0] and first.closed and second.closed
+    assert controller.device_enabled is False and worker.rendered_generation==-1
+
+
 def test_builtin_icons_are_drawn_and_home_has_a_house_symbol():
     from PIL import ImageChops
     printer = key_image('Action', False, False, icon='printer')

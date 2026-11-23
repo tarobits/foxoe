@@ -23,6 +23,10 @@ class KeyColors(StrictModel):
     backgroundColor: Color | None = None
 
 
+class DeckPower(StrictModel):
+    enabled: bool = Field(strict=True)
+
+
 class KeyPreview(KeyColors):
     label: str = Field(default='', max_length=60)
     icon: Icon | None = None

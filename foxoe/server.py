@@ -21,7 +21,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .controller import Controller
 from .device import DeviceWorker, key_image
-from .models import Configuration, DataSource, KeyPreview
+from .models import Configuration, DataSource, KeyPreview, DeckPower
 from .store import Conflict, Store
 from .sources import Sources
 from .registration import registration_app
@@ -34,6 +34,7 @@ ORIGIN = "http://127.0.0.1:8765"
 def create_app(directory: Path | None = None, hardware: bool = True):
     store = Store(directory or ROOT / "data")
     controller = Controller(store.load(), ORIGIN)
+    controller.set_device_enabled(store.deck_enabled())
     sources = Sources(controller)
 
     @asynccontextmanager
@@ -114,6 +115,20 @@ def create_app(directory: Path | None = None, hardware: bool = True):
     @app.get("/api/state")
     async def state():
         return controller.state()
+
+    @app.get('/api/deck/power')
+    async def deck_power():
+        return {'enabled': controller.device_enabled, 'device': controller.device,
+                'brightness': controller.config.brightness if controller.device_enabled else 0}
+
+    @app.put('/api/deck/power')
+    async def set_deck_power(value: DeckPower):
+        try:
+            store.set_deck_enabled(value.enabled)
+        except sqlite3.Error:
+            return JSONResponse({'error': 'saveFailed'}, status_code=503)
+        controller.set_device_enabled(value.enabled)
+        return await deck_power()
 
     @app.get("/api/config")
     async def config():

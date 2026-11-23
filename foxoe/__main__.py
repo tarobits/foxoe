@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import signal
+import sys
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -18,15 +19,20 @@ class SharedLoopServer(uvicorn.Server):
         yield
 
 
-def main():
+def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    if argv and argv[0] == 'deck':
+        from .deck_cli import main as deck_main
+        return deck_main(argv[1:])
     parser = argparse.ArgumentParser(description="Fox Operating Environment")
+    parser.epilog = 'Use foxoe deck on|off|status to control the running service’s Stream Deck.'
     parser.add_argument("--data-dir", type=Path)
     parser.add_argument("--no-device", action="store_true", help="Run without USB discovery")
     parser.add_argument("--registration-cert", type=Path, help="TLS certificate chain for the separate registration API")
     parser.add_argument("--registration-key", type=Path, help="TLS private key for the separate registration API")
     parser.add_argument("--registration-host", default="0.0.0.0", help="Registration listener address, used only with TLS files")
     parser.add_argument("--registration-port", type=int, default=8766)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if bool(args.registration_cert) != bool(args.registration_key):
         parser.error("Both --registration-cert and --registration-key are required")
     app = create_app(args.data_dir, hardware=not args.no_device)

@@ -63,6 +63,7 @@ def test_admin_cannot_expose_local_credentials_or_bridge(admin):
     client, _, _ = admin
     login(client)
     for method, path in [('POST', '/api/pair'), ('POST', '/api/registration-token'), ('GET', '/api/health'),
+                         ('GET', '/api/deck/power'), ('PUT', '/api/deck/power'),
                          ('GET', '/bridge'), ('POST', '/v1/apps'), ('GET', '/admin/config.json'), ('GET', '/api/images/../../admin/config.json')]:
         assert client.request(method, path, headers={'origin': ORIGIN}).status_code == 404
     assert client.get('/api/config', headers={'origin': 'http://127.0.0.1:8765'}).status_code == 403

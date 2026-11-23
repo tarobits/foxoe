@@ -13,5 +13,5 @@ export interface WidgetItem extends WidgetElement { row: number; column: number;
 export interface Widget extends WidgetElement { x: number; y: number; w: number; h: number; padding: number; gap: number; allowOverlap?: boolean; columns: number[]; rows: number[]; items: WidgetItem[] }
 export interface Config { gridVersion: 2; revision: number; title: string; locale: 'en' | 'de'; brightness: number; apps: Application[]; sources: Source[]; widgets: Widget[] }
 export interface DeckButton extends KeyColors { id: string; label: string; icon: IconName | null; textSize?: number; image?: string | null; disabled?: boolean }
-export interface DeckState { connected: boolean; device: string; activeApp: string | null; generation: number; configRevision: number; buttons: (DeckButton | null)[] }
+export interface DeckState { connected: boolean; device: string; deviceEnabled?: boolean; activeApp: string | null; generation: number; configRevision: number; buttons: (DeckButton | null)[] }
 export interface DataEntry { value: unknown; error: string | null; updatedAt: number | null }
