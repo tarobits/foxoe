@@ -1,17 +1,19 @@
 (() => {
-  if (globalThis.__foxoeBridge) return;
-  globalThis.__foxoeBridge = true;
+  if (globalThis.__foxoeBridge && globalThis.__foxoeBridge.build === globalThis.__foxoeBuild) return;
+  globalThis.__foxoeBridge?.dispose?.();
   const publish = message => window.postMessage({ ...message, source: 'foxoe:bridge' }, location.origin);
-  window.addEventListener('message', event => {
+  const onPageMessage = event => {
     if (event.source !== window || event.origin !== location.origin || event.data?.source !== 'foxoe:app') return;
     if (!['hello', 'layout'].includes(event.data.type)) return;
     chrome.runtime.sendMessage(event.data).then(reply => publish({ ...reply, request: event.data.request }))
       .catch(() => publish({ type: 'connection', connected: false }));
-  });
-  chrome.runtime.onMessage.addListener(message => {
+  };
+  window.addEventListener('message', onPageMessage);
+  const onBridgeMessage = message => {
     publish(message);
     if (message.type === 'connection') home.textContent = chrome.i18n.getMessage('home');
-  });
+  };
+  chrome.runtime.onMessage.addListener(onBridgeMessage);
   // The toolbar survives app layout changes in an isolated shadow tree. Only
   // configured, explicitly permission-granted pages receive this script.
   const host = document.createElement('foxoe-home');
@@ -24,4 +26,10 @@
   home.addEventListener('click', () => void chrome.runtime.sendMessage({ type: 'home' }));
   shadow.append(style, home);
   if (location.href !== 'http://127.0.0.1:8765/') document.documentElement.append(host);
+  globalThis.__foxoeBridge = { build: globalThis.__foxoeBuild, dispose() {
+    window.removeEventListener('message', onPageMessage);
+    try { chrome.runtime.onMessage.removeListener(onBridgeMessage); } catch { /* Retired extension context. */ }
+    host.remove();
+    publish({ type: 'connection', connected: false });
+  } };
 })();

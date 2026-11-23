@@ -24,6 +24,7 @@ from .models import Configuration
 from .store import Conflict, Store
 from .sources import Sources
 from .registration import registration_app
+from .extension_update import ready_build
 
 ROOT = Path(__file__).resolve().parent.parent
 ORIGIN = "http://127.0.0.1:8765"
@@ -168,7 +169,7 @@ def create_app(directory: Path | None = None, hardware: bool = True):
             except ValueError:
                 await socket.close(code=1008)
                 return
-            await socket.send_json({"type": "configuration", "config": controller.config.model_dump()})
+            await socket.send_json({"type": "configuration", "config": controller.config.model_dump(), "extensionBuild": ready_build(ROOT)})
 
             async def send():
                 while True:
@@ -188,7 +189,7 @@ def create_app(directory: Path | None = None, hardware: bool = True):
                             raise ValueError("invalid_message")
                         kind = message.get("type")
                         if kind == "ping":
-                            controller.emit({"type": "pong"})
+                            controller.emit({"type": "pong", "extensionBuild": ready_build(ROOT)})
                         elif kind == "context":
                             controller.context(owner, message.get("document"), message.get("url"))
                         elif kind == "inactive":

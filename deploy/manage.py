@@ -301,6 +301,38 @@ def switch(root, target):
     os.replace(temporary, root / 'current')
 
 
+def replace_extension(root, source):
+    """Keep Chromium's canonical directory stable across releases and rollback."""
+    target = root / 'extension'
+    if target.exists() and (target.is_symlink() or not (target / '.foxoe-managed').is_file()):
+        raise DeploymentError('The extension directory is not managed by FoxOE; no files were replaced.')
+    staged = Path(tempfile.mkdtemp(prefix='extension-stage-', dir=root))
+    retired = root / ('extension-retired-' + uuid.uuid4().hex)
+    try:
+        if source is not None:
+            shutil.copytree(source, staged, dirs_exist_ok=True)
+            (staged / '.foxoe-managed').touch()
+        if target.exists():
+            target.rename(retired)
+        if source is not None:
+            staged.rename(target)
+    except BaseException:
+        if retired.exists() and not target.exists():
+            retired.rename(target)
+        raise
+    finally:
+        if staged.exists():
+            shutil.rmtree(staged)
+    if retired.exists():
+        shutil.rmtree(retired)
+
+
+def extension_ready(root):
+    build_path = root / 'extension/build.json'
+    build = json.loads(build_path.read_text()).get('build') if build_path.is_file() else None
+    atomic_json(root / 'extension-ready.json', {'build': build})
+
+
 def healthy(root, timeout=30):
     """Require both systemd's live process and this release's health identity."""
     deadline = time.monotonic() + timeout
@@ -351,6 +383,9 @@ def recover(root):
         data.rename(root / ('failed-data-' + uuid.uuid4().hex))
     if restored:
         restored.rename(data)
+    if journal.get('manage_extension'):
+        replace_extension(root, backup / 'extension' if journal.get('had_extension') else None)
+        extension_ready(root)
     if journal['previous']:
         switch(root, journal['previous'])
         systemctl('start', UNIT)
@@ -368,6 +403,12 @@ def activate(root, release, config):
     previous = (root / 'current').resolve() if (root / 'current').is_symlink() else None
     config_path = root / 'installation.json'
     old_config = json.loads(config_path.read_text()) if config_path.exists() else None
+    manage_extension = (release / 'extension').is_dir()
+    had_extension = (root / 'extension').exists()
+    if manage_extension and (root / 'extension').is_symlink():
+        raise DeploymentError('The extension directory must not be a symlink.')
+    if manage_extension and had_extension and not (root / 'extension/.foxoe-managed').is_file():
+        raise DeploymentError('The extension directory is not managed by FoxOE; no files were replaced.')
     backup = root / 'backups' / uuid.uuid4().hex
     backup.mkdir(parents=True)
     # Fresh installs have no previous service to stop. Updates must still fail
@@ -378,17 +419,24 @@ def activate(root, release, config):
         had_data = (root / 'data').exists()
         if had_data:
             shutil.copytree(root / 'data', backup / 'data')
+        if manage_extension and had_extension:
+            shutil.copytree(root / 'extension', backup / 'extension')
         atomic_json(root / 'pending.json', {'previous': str(previous) if previous else None,
-                    'backup': str(backup), 'had_data': had_data, 'config': old_config})
+                    'backup': str(backup), 'had_data': had_data, 'config': old_config,
+                    'manage_extension': manage_extension, 'had_extension': had_extension})
     except BaseException:
         if previous:
             systemctl('start', UNIT)
         raise
     try:
         switch(root, release)
+        if manage_extension:
+            replace_extension(root, release / 'extension')
         systemctl('start', UNIT)
         healthy(root)
         atomic_json(config_path, config)
+        if manage_extension:
+            extension_ready(root)
         (root / 'pending.json').unlink()
     except BaseException:
         recover(root)
@@ -404,6 +452,7 @@ def main(argv=None):
     parser.add_argument('--channel', choices=('stable', 'beta'), help='Remembered update channel; defaults to stable on install')
     parser.add_argument('--skip-system-deps', action='store_true', help='Compatibility option; system setup is always separate now')
     parser.add_argument('--recover', action='store_true', help='Restore an interrupted activation without fetching an update')
+    parser.add_argument('--sync-extension', action='store_true', help='Prepare the stable extension directory for an existing installation without fetching an update')
     args = parser.parse_args(argv)
     if sys.version_info < (3, 11) or platform.system() != 'Linux':
         parser.error('Use Raspberry Pi OS/Debian Linux with Python 3.11 or newer.')
@@ -434,6 +483,16 @@ def main(argv=None):
             raise DeploymentError('No managed installation found. Run install.sh first.')
         if args.action == 'update' and (not (root / 'current').is_symlink() or not unit.exists()):
             raise DeploymentError('Managed release or service is missing. Repair the installation before updating.')
+        if args.sync_extension:
+            if not installed:
+                raise DeploymentError('Install FoxOE before preparing its extension directory.')
+            release = (root / 'current').resolve()
+            if not (release / 'extension/build.json').is_file():
+                raise DeploymentError('This release does not support automatic extension updates.')
+            replace_extension(root, release / 'extension')
+            extension_ready(root)
+            print(f'Extension directory ready: {root}/extension')
+            return
         if not installed:
             check_install_port()
         config = json.loads((root / 'installation.json').read_text()) if installed else {'repository': args.repository}
@@ -480,7 +539,7 @@ def main(argv=None):
             raise
     print(f'FoxOE {config["version"]} ready at http://127.0.0.1:8765/ (commit {config["commit"][:12]}).')
     print(f'Changelog: {root}/current/CHANGELOG.md')
-    print(f'Extension directory: {root}/current/extension')
+    print(f'Extension directory: {root}/extension')
 
 
 def cancel_deployment(*_):

@@ -478,3 +478,69 @@ def test_health_invalid_response_reports_diagnostics_without_echoing_content(tmp
     assert 'private unrelated response' not in str(raised.value)
     assert 'within 1 seconds' in str(raised.value)
     assert 'logs/service.log' in str(raised.value)
+
+
+def test_extension_activation_and_failed_update_restore_stable_directory(installation, monkeypatch):
+    from foxoe.extension_update import ready_build
+    root, old, new, config, _ = installation
+    for release, build in ((old, 'a' * 64), (new, 'b' * 64)):
+        (release / 'extension').mkdir()
+        (release / 'extension/build.json').write_text(json.dumps({'build': build}))
+        (release / 'extension/background.js').write_text(build)
+    deploy.replace_extension(root, old / 'extension')
+    deploy.extension_ready(root)
+    def fail(_):
+        assert ready_build(new) is None, 'Never advertise an activation before it commits'
+        if (root / 'current').resolve() == new:
+            raise OSError('unhealthy')
+    monkeypatch.setattr(deploy, 'healthy', fail)
+    with pytest.raises(OSError):
+        deploy.activate(root, new, config)
+    assert (root / 'extension/background.js').read_text() == 'a' * 64
+    assert ready_build(old) == 'a' * 64
+    monkeypatch.setattr(deploy, 'healthy', lambda *_: None)
+    deploy.activate(root, new, config)
+    assert not (root / 'extension').is_symlink()
+    assert (root / 'extension/background.js').read_text() == 'b' * 64
+    assert ready_build(new) == 'b' * 64
+
+
+def test_extension_copy_failure_and_unmanaged_directory_are_preserved(tmp_path, monkeypatch):
+    source = tmp_path / 'source'
+    source.mkdir()
+    (source / 'background.js').write_text('new')
+    target = tmp_path / 'extension'
+    target.mkdir()
+    (target / 'custom').write_text('keep')
+    with pytest.raises(deploy.DeploymentError):
+        deploy.replace_extension(tmp_path, source)
+    assert (target / 'custom').read_text() == 'keep'
+    (target / '.foxoe-managed').touch()
+    monkeypatch.setattr(deploy.shutil, 'copytree', lambda *a, **kw: (_ for _ in ()).throw(OSError('disk full')))
+    with pytest.raises(OSError):
+        deploy.replace_extension(tmp_path, source)
+    assert (target / 'custom').read_text() == 'keep'
+    assert not list(tmp_path.glob('extension-stage-*'))
+
+
+def test_sync_extension_migration_needs_supported_release_and_never_fetches(installation, tmp_path, monkeypatch):
+    root, old, _, config, calls = installation
+    monkeypatch.setattr(deploy.Path, 'home', lambda: tmp_path)
+    monkeypatch.setattr(deploy.platform, 'system', lambda: 'Linux')
+    monkeypatch.setattr(deploy.os, 'geteuid', lambda: 1000)
+    monkeypatch.setattr(deploy, 'published_release', lambda *a: pytest.fail('Migration must not fetch a release'))
+    unit = tmp_path / '.config/systemd/user/foxoe.service'
+    unit.parent.mkdir(parents=True)
+    unit.write_text(deploy.service_text(root))
+    args = ['update', '--directory', str(root), '--sync-extension']
+    with pytest.raises(deploy.DeploymentError, match='does not support'):
+        deploy.main(args)
+    assert not (root / 'extension').exists()
+    (old / 'extension').mkdir()
+    (old / 'extension/build.json').write_text(json.dumps({'build': 'a' * 64}))
+    deploy.main(args)
+    assert (root / 'extension/.foxoe-managed').is_file()
+    assert json.loads((root / 'extension-ready.json').read_text()) == {'build': 'a' * 64}
+    assert json.loads((root / 'installation.json').read_text()) == config
+    assert (root / 'current').resolve() == old
+    assert not calls, 'Preparing extension files must not interrupt the running service'

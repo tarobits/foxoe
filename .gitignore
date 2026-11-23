@@ -13,3 +13,6 @@ __pycache__/
 extension/icons/*.png
 foxoe/assets/icons/*.png
 public/heroicons.svg
+extension/build.js
+extension/build.json
+extension/build-content.js

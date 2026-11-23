@@ -1,4 +1,11 @@
 import { HOME, allowedApp, validSender } from './protocol.js';
+import { BUILD } from './build.js';
+import { extensionUpdater } from './update.js';
+
+const checkExtensionUpdate = extensionUpdater(chrome, (...args) => fetch(...args), BUILD, async build => {
+  const tab = tabId == null ? null : await chrome.tabs.get(tabId).catch(() => null);
+  await chrome.storage.local.set({ extensionResume: tab ? { build, id: tab.id, url: tab.url } : null });
+});
 
 let socket;
 let heartbeat;
@@ -69,7 +76,7 @@ async function refreshContext() {
     const request = crypto.randomUUID();
     requests.set(request, { document: documentId, reply: response => {
       if (response.type !== 'ack' || sequence !== contextSequence) return;
-      void chrome.scripting.executeScript({ target: { tabId, documentIds: [documentId] }, files: ['content.js'] }).then(async () => {
+      void chrome.scripting.executeScript({ target: { tabId, documentIds: [documentId] }, files: ['build-content.js', 'content.js'] }).then(async () => {
         if (sequence !== contextSequence) return;
         const delivered = await post({ type: 'connection', connected: Boolean(allowedApp(tab.url, config.apps)), locale: config.locale });
         if (sequence === contextSequence && delivered) clearTimeout(contextRetry);
@@ -122,6 +129,10 @@ async function openSocket(attempt) {
   current.onmessage = async event => {
     if (socket !== current) return;
     const message = JSON.parse(event.data);
+    if (message.type === 'configuration' || message.type === 'pong') {
+      if (await checkExtensionUpdate(message.extensionBuild)) return;
+      if (socket !== current) return;
+    }
     if (message.type === 'configuration') {
       authenticated = true;
       config = message.config;
@@ -196,5 +207,16 @@ chrome.tabs.onUpdated.addListener((id, change) => {
 });
 chrome.tabs.onRemoved.addListener(id => { if (id === tabId) { invalidate(); tabId = undefined; void chrome.storage.session.remove('kioskTab'); } });
 chrome.alarms.onAlarm.addListener(alarm => { if (alarm.name === 'reconnect') void connect(); });
-chrome.runtime.onStartup.addListener(() => void connect());
+chrome.runtime.onStartup.addListener(() => { void chrome.storage.local.remove('extensionResume'); void connect(); });
+chrome.runtime.onInstalled?.addListener(async details => {
+  if (details.reason !== 'update') return;
+  const { extensionResume } = await chrome.storage.local.get('extensionResume');
+  await chrome.storage.local.remove('extensionResume');
+  if (extensionResume?.build !== BUILD) return;
+  const tab = await chrome.tabs.get(extensionResume.id).catch(() => null);
+  if (!tab || tab.url !== extensionResume.url) return;
+  tabId = tab.id;
+  await chrome.storage.session.set({ kioskTab: tabId });
+  await connect(); await refreshContext();
+});
 void connect();
