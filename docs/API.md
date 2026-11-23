@@ -215,7 +215,10 @@ Widgets support `textColor`, `iconColor`, `backgroundColor` (`#RRGGBB` or `null`
 `padding` (0–48px), and `rules`. A `kind: "layout"` widget additionally has
 `rows`/`columns` (1–6 integer weights, each 1–12), `gap` (0–32px), and up to 24
 `items`. Each item has its own content, styles, and rules, plus zero-based
-`row`/`column` and `rowSpan`/`columnSpan`. Items cannot overlap. Supported item
+`row`/`column` and `rowSpan`/`columnSpan`. Items cannot overlap unless the widget
+sets `allowOverlap: true` (default `false`). Bounds and unique IDs remain required;
+later items render above earlier items. This does not allow dashboard widgets to
+overlap. Supported item
 kinds are `text`, `value`, `list`, `clock`, and `icon`; nested layouts are rejected.
 
 Each rule compares `source` and `path` using an `operator`, with a typed scalar

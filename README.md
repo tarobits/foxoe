@@ -142,6 +142,9 @@ remain editable through fields.
 
 Choose **Custom layout** to combine text, values, lists, clocks, and icons in one
 widget. Adjust row/column proportions and each item's position and spans.
+Enable **Allow overlaps** in the widget's Content tab to share cells between
+items; later items appear above earlier ones. Dashboard widgets still cannot
+overlap. Icons shrink to fit their cells when rows or columns become smaller.
 **Appearance** controls text, icon, and background colors, text size, alignment,
 padding, and item spacing. **Rules** compare live data fields with typed values to
 change colors or visibility, for the whole widget or individual items. Matching
