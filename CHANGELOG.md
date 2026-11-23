@@ -7,6 +7,20 @@ GitHub release tags use the `v` prefix, for example `v1.0.0`.
 
 ## [Unreleased]
 
+## [0.1.0-pre8] - 2026-11-23
+
+### Added
+
+- Nested AND/OR condition groups and NOT toggles for widget and item colors and visibility, with a visual editor and support through the configuration API. Existing single-condition rules remain compatible.
+
+### Fixed
+
+- The entire dashboard widget area, including its contents, scales to fit above the app dock without scrolling. Smaller screens retain the grid layout, and dragging and resizing account for the scale.
+
+**Downgrade compatibility:** After saving configuration containing rules with this
+version, restoring an earlier release also requires restoring the pre-update
+database; earlier releases do not recognize the combined-condition field.
+
 ## [0.1.0-pre7] - 2026-11-23
 
 **Test version / proof of concept.** These changes still require validation on
@@ -130,7 +144,8 @@ extension session have not yet been validated on the target setup.
 - English and German interfaces.
 - Raspberry Pi OS/Debian installation and updates from published GitHub releases, with remembered stable/beta channels, data preservation, and recovery after a failed activation.
 
-[Unreleased]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre7...main
+[Unreleased]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre8...main
+[0.1.0-pre8]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre7...v0.1.0-pre8
 [0.1.0-pre7]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre6...v0.1.0-pre7
 [0.1.0-pre6]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre5...v0.1.0-pre6
 [0.1.0-pre5]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre4...v0.1.0-pre5
