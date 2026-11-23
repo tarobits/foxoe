@@ -105,6 +105,10 @@ def create_app(directory: Path | None = None, hardware: bool = True):
         store.load()
         return {"pid": os.getpid(), "release": str(ROOT)}
 
+    @app.get('/api/access')
+    async def access():
+        return {'remote': False, 'authenticated': True, 'locale': controller.config.locale}
+
     @app.get("/api/state")
     async def state():
         return controller.state()

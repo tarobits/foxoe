@@ -9,7 +9,7 @@ import subprocess
 import sys
 
 
-PACKAGES = ('git', 'ca-certificates', 'python3-venv', 'python3-dev',
+PACKAGES = ('git', 'ca-certificates', 'openssl', 'python3-venv', 'python3-dev',
             'build-essential', 'libhidapi-libusb0', 'fonts-dejavu-core',
             'libjpeg-dev', 'zlib1g-dev')
 
