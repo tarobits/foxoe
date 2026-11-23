@@ -107,12 +107,16 @@ is at `~/FoxOE`; adjust its two paths to the actual installation. The installer
 instead generates the unit for its managed installation directory. Reboot once
 after using the installer and reconnect the deck to apply USB group membership.
 
-In a **dedicated Chromium profile**, load `~/.local/share/foxoe/current/extension/`
+In a **dedicated Chromium profile**, load `~/.local/share/foxoe/extension/`
 (or `extension/` for a manual installation) as an unpacked extension
 through `chrome://extensions`. The extension requests HTTP/HTTPS host access so
 newly registered app origins work without another permission dialog. It injects
 its bridge only into the selected kiosk tab and validates top-frame/document
 identity before accepting app actions.
+
+Managed installations update and reload this extension together with FoxOE.
+For an existing installation using `current/extension`, follow the one-time
+[extension migration](docs/DEPLOYMENT.md#automatic-extension-updates).
 
 1. In FoxOE Settings → System, reveal the **browser connection token**.
 2. Paste it into the extension's options and save.
@@ -126,6 +130,9 @@ the toolbar to select the intended tab. Home remains reserved as key 15. Changin
 tabs, navigating, or losing browser focus releases the active app's controls.
 
 ## Customize the dashboard
+
+To configure from another computer, enable the password-protected
+[HTTPS administration page](docs/DEPLOYMENT.md#network-administration).
 
 Use **Edit dashboard** to add, move, resize, and configure widgets. Changes become
 persistent only when saved; Cancel discards the draft. The grid has 12 columns,

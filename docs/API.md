@@ -74,7 +74,25 @@ values are upstream Heroicons component names. Existing aliases (`keypad`,
 remain supported, along with the `foxoe` brand mark. Unknown names and empty
 strings are rejected; use JSON `null` to hide the icon.
 
-### Images
+### Key colors
+
+`iconColor`, `textColor`, and `backgroundColor` accept `#RRGGBB` values or `null`
+to restore the defaults. They apply to Stream Deck keys and their previews, not
+touchscreen launcher tiles. Set them on the application manifest for its launcher
+key or on individual screen buttons; live `updateButton` calls accept them too.
+
+```js
+await deck.updateButton('print', {
+  iconColor: '#ffffff', textColor: '#ffffff', backgroundColor: '#166534',
+});
+```
+
+An explicit icon color tints built-in icons, including the fox silhouette.
+Uploaded images retain their colors; the background shows through transparent
+pixels. Text color has no effect on a key filled by an uploaded image. Disabled
+keys retain their disabled appearance. The reserved Home key keeps its colors.
+
+### Uploaded images
 
 Applications can register custom launcher and button icons in the same request.
 The launcher uses the app's `image` field; each screen button can reference its
@@ -143,7 +161,7 @@ deck.dispose();
 
 Catch rejected promises when pages disconnect. A page can also call
 `show({id, buttons})`, `push({id, buttons})`, `pushScreen(id)`, and
-`updateButton(id, {label, icon, image, disabled, textSize})`. `show` replaces the layout
+`updateButton(id, {label, icon, image, disabled, textSize, iconColor, textColor, backgroundColor})`. `show` replaces the layout
 stack; `push` adds a temporary screen; `pop` restores the previous one. At most
 eight layouts may be stacked. App-supplied labels should use that app's locale.
 Image names must belong to the registered app.
@@ -165,3 +183,8 @@ The dashboard uses `GET /api/config`, `PUT /api/config`, `GET /api/state`, and
 configuration `revision`; a stale revision returns **409**. These routes are not
 the remote integration API. The local bridge token and registration credential
 are deliberately different credentials with different endpoints and purposes.
+
+The optional HTTPS administration listener exposes the dashboard configuration,
+state, data, and image routes after a password login. Its secure HttpOnly session
+cookie is separate from all integration credentials. It does not expose pairing,
+registration credentials, or `/bridge`. See [network administration](DEPLOYMENT.md#network-administration).

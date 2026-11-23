@@ -52,6 +52,7 @@ The managed installation defaults to `~/.local/share/foxoe`:
 | Path | Contents |
 | --- | --- |
 | `current` | Symlink to the active release |
+| `extension/` | Stable unpacked extension directory, updated and restored with the service |
 | `releases/` | Separate source, Python environment, and frontend build per deployment |
 | `data/` | Persistent dashboard configuration, images, and credentials |
 | `installation.json` | Repository, installed version/commit, and update channel |
@@ -105,9 +106,75 @@ Failure restores the previous code and complete data snapshot, including
 credentials. Operations accepted by the new process during its short probation
 period are discarded if it rolls back.
 
-Chromium loads its unpacked extension from `current/extension`. Reload the
-extension or restart the dedicated browser when extension files change; the
-service updater does not control Chromium itself.
+Chromium loads its unpacked extension from the stable runtime `extension/`
+directory. Successful updates publish the extension files alongside the service.
+The paired extension checks their build fingerprint and reloads itself; failed
+deployments restore the previous extension files as well. Chromium itself is
+not restarted, and application pages are not reloaded.
+
+## Automatic extension updates
+
+Existing installations that loaded `current/extension` need a one-time change
+after installing the release that introduces automatic extension updates:
+
+```sh
+bash ~/.local/share/foxoe/current/update.sh --sync-extension
+```
+
+In `chrome://extensions`, remove the old FoxOE entry, load
+`~/.local/share/foxoe/extension/` unpacked, and pair it with the local dashboard
+again. Reload the kiosk page once to retire the old content script. The stable
+directory avoids Chromium retaining a path to an older release. Future managed
+updates reload the extension automatically after activation succeeds. Keep
+loading that directory, not a version-specific release folder.
+
+The extension checks through its authenticated local connection. It reloads
+only when its own on-disk build matches the service's completed deployment,
+and records each attempt to prevent reload loops. The selected tab is restored
+only across an extension update when its ID and URL still match. Ordinary
+browser restarts retain the existing dashboard-tab selection behavior.
+Manual source installations still require a manual extension reload.
+
+## Network administration
+
+Run this once as the kiosk user (SSH is fine; no sudo is needed):
+
+```sh
+~/.local/share/foxoe/current/.venv/bin/python -m foxoe.admin_setup --hostname kiosk.local
+systemctl --user restart foxoe
+```
+
+Replace `kiosk.local` with the Pi's hostname or LAN IP. The command prompts for
+a separate administrator password of at least 12 characters and generates a
+random private key and self-signed certificate. Open `https://kiosk.local:8767/`
+from your other computer, accept the expected certificate warning for your Pi,
+and sign in. If a firewall is enabled, allow TCP 8767 from your LAN. Use `--port`
+to choose a different port, or `--data-dir` for a nondefault data directory.
+
+The network listener is opt-in. The local kiosk remains at
+`http://127.0.0.1:8765/` without a login. Remote administration can edit the
+dashboard, apps, widgets, data sources, and key appearance; it does not expose
+the browser bridge, connection tokens, or app registration credentials. Launcher
+tiles are previews in the remote page and do not navigate the Pi's browser.
+
+Sessions expire after eight hours, can be signed out, and are invalidated when
+the service restarts. Passwords are stored as salted PBKDF2-HMAC-SHA256 hashes
+with 600,000 iterations, following the [OWASP work-factor guidance](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2).
+Login attempts are rate-limited, and writes require a matching browser origin.
+
+Run the same setup command to change or reset the password, then restart the
+user service. The certificate stays the same across password changes and updates.
+It expires after 825 days; to replace it, stop the service, move the two PEM files
+out of `data/admin/`, rerun setup, and start the service. Browsers will show a new
+certificate warning. The configuration, password hash, and TLS files live in
+`data/admin/` and are included in the updater's data backups and rollback.
+
+To disable remote access:
+
+```sh
+~/.local/share/foxoe/current/.venv/bin/python -m foxoe.admin_setup --disable
+systemctl --user restart foxoe
+```
 
 ## Recovery and retained files
 
