@@ -123,6 +123,14 @@ textarea { resize: vertical; }
 .icon-choice { display: flex; align-items: center; gap: 8px; }
 .icon-choice select { min-width: 0; flex: 1; }
 .app-key-style > label { min-width: 140px; }
+.key-colors { display: flex; align-items: end; flex-wrap: wrap; gap: 16px; margin-top: 16px; }
+.key-colors input[type="color"] { width: 72px; padding: 4px; cursor: pointer; }
+.key-colors .deck-key { width: 96px; height: 96px; flex-shrink: 0; }
+.key-colors .deck-key img, .key-colors .deck-key .icon { width: 36px; height: 36px; flex-shrink: 0; }
+.key-colors .deck-key > span:last-child { line-height: 1.2; }
+.tinted-fox { mask: url('/foxoe.svg') center / contain no-repeat; }
+.access-screen { min-height: 100dvh; display: grid; place-items: center; padding: 24px; }
+.access-form { width: min(100%, 360px); display: grid; gap: 20px; }
 .source-form .form-row + .form-row { margin-top: 20px; }
 .help { font-size: 14px; margin-top: 12px; max-width: 70ch; }
 .system-settings { max-width: 760px; display: grid; gap: 32px; }

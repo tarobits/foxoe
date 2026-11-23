@@ -19,7 +19,7 @@ test('catalog covers the complete installed outline library and generated sprite
 });
 
 test('icon rendering handles null, full library, and hostile identifiers; picker searches safely', async () => {
-  const server = await createServer({ server: { middlewareMode: true, watch: null }, optimizeDeps: { noDiscovery: true, entries: [] }, appType: 'custom' });
+  const server = await createServer({ server: { middlewareMode: true, watch: null, ws: false }, optimizeDeps: { noDiscovery: true, entries: [] }, appType: 'custom' });
   try {
     const { default: Icon } = await server.ssrLoadModule('/frontend/Icon.vue');
     const render = name => renderToString(createSSRApp(Icon, { name }));
@@ -42,6 +42,13 @@ test('icon rendering handles null, full library, and hostile identifiers; picker
     const markup = await renderToString(createSSRApp(Picker, { modelValue: null }));
     assert.match(markup, /No icon/);
     assert.match(markup, /Search icons/);
+    const { default: DeckKey } = await server.ssrLoadModule('/frontend/DeckKey.vue');
+    const button = { id: 'a', label: 'Color', icon: 'user', iconColor: '#ff0000', textColor: '#00ff00', backgroundColor: '#0000ff' };
+    const preview = await renderToString(createSSRApp(DeckKey, { button }));
+    for (const color of ['#ff0000', '#00ff00', '#0000ff']) assert.ok(preview.includes(color));
+    const home = await renderToString(createSSRApp(DeckKey, { button, home: true }));
+    assert.ok(home.includes('#4f46e5'));
+    assert.ok(!home.includes('#ff0000') && !home.includes('#0000ff'));
   } finally {
     await server.close();
   }

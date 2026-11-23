@@ -1,5 +1,5 @@
 import { createApp } from 'vue';
-import App from './App.vue';
+import Access from './Access.vue';
 import './style.css';
 
-createApp(App).mount('#app');
+createApp(Access).mount('#app');

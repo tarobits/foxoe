@@ -2,11 +2,15 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import Icon from './Icon.vue';
 import IconPicker from './IconPicker.vue';
+import DeckKey from './DeckKey.vue';
 import WidgetContent from './WidgetContent.vue';
 import Demo from './Demo.vue';
 import { t, locale } from './i18n';
 import { firstSpace, fits } from './model.js';
 import type { Config, Widget, Source, DeckState, DataEntry } from './types';
+
+defineProps<{ remote?: boolean }>();
+const emit = defineEmits<{ expired: []; logout: [] }>();
 
 const config = ref<Config>();
 const draft = ref<Config>();
@@ -43,6 +47,7 @@ const id = (prefix: string) => `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
 async function api(path: string, options?: RequestInit) {
   const response = await fetch(`/api/${path}`, { ...options, signal: abort.signal, headers: { 'Content-Type': 'application/json', ...options?.headers } });
   const result = await response.json();
+  if (response.status === 401) emit('expired');
   if (!response.ok) throw new Error(result.error || 'saveFailed');
   return result;
 }
@@ -188,6 +193,7 @@ onUnmounted(() => { abort.abort(); clearTimeout(pollTimer); clearInterval(clockT
     <header class="shell-header">
       <div class="brand"><img class="brand-mark" src="/foxoe.svg" alt=""><h1>{{ screen === 'settings' ? t('settings') : active?.title }}</h1></div>
       <div class="header-actions">
+        <button v-if="remote" class="secondary" @click="emit('logout')">{{ t('signOut') }}</button>
         <template v-if="editing || screen === 'settings'"><button class="secondary" :disabled="saving" @click="cancel">{{ t('cancel') }}</button><button class="primary" :disabled="saving" @click="save"><Icon name="check" />{{ t('save') }}</button></template>
         <template v-else><button class="icon-button" :aria-label="t('editDashboard')" @click="beginEdit"><Icon name="edit" /></button><button class="icon-button" :aria-label="t('settings')" @click="openSettings()"><Icon name="settings" /></button></template>
       </div>
@@ -221,6 +227,7 @@ onUnmounted(() => { abort.abort(); clearTimeout(pollTimer); clearInterval(clockT
               <button class="icon-button danger-text" :aria-label="t('remove') + ' ' + app.name" @click="draft.apps = draft.apps.filter(item => item.id !== app.id)"><Icon name="remove" /></button>
               </div>
               <div class="form-row app-key-style"><IconPicker v-model="app.icon" /><label>{{ t('keyTextSize') }}<input v-model.number="app.textSize" type="number" min="8" max="32" step="1" required></label></div>
+              <div class="key-colors"><label v-for="field in (['iconColor', 'textColor', 'backgroundColor'] as const)" :key="field">{{ t(field) }}<input type="color" :value="app[field] || (field === 'backgroundColor' ? '#1f2937' : field === 'iconColor' ? '#f8fafc' : '#ffffff')" @input="app[field] = ($event.target as HTMLInputElement).value"></label><button class="secondary" @click="app.iconColor = app.textColor = app.backgroundColor = null">{{ t('resetColors') }}</button><DeckKey :button="{ ...app, label: app.name, image: app.image ? app.images?.[app.image] : null }" /></div>
             </div>
             <p v-if="!draft.apps.length" class="muted">{{ t('noApps') }}</p>
           </section>
@@ -236,15 +243,15 @@ onUnmounted(() => { abort.abort(); clearTimeout(pollTimer); clearInterval(clockT
           <section v-else key="system" class="settings-section system-settings">
             <div class="form-row"><label class="grow">{{ t('title') }}<input v-model="draft.title" maxlength="60" required></label><label>{{ t('language') }}<select v-model="draft.locale"><option value="en">{{ t('english') }}</option><option value="de">{{ t('german') }}</option></select></label></div>
             <label>{{ t('brightness') }}<div class="range-row"><input v-model.number="draft.brightness" type="range" min="0" max="100"><output>{{ draft.brightness }}%</output></div></label>
-            <section class="connection-section"><h2>{{ t('pairing') }}</h2><dl class="connection-details"><div><dt>{{ t('browser') }}</dt><dd>{{ t(state?.connected ? 'connected' : 'disconnected') }}</dd></div><div><dt>{{ t('device') }}</dt><dd>{{ t(state?.device || 'disconnected') }}</dd></div></dl><button class="secondary" @click="showToken">{{ t(token ? 'hideToken' : 'showToken') }}</button><Transition name="notice"><div v-if="token" class="pairing-token"><p class="muted">{{ t('tokenHelp') }}</p><input :value="token" readonly :aria-label="t('pairing')" autocomplete="off" @focus="($event.target as HTMLInputElement).select()"></div></Transition></section>
-            <section><h2>{{ t('registration') }}</h2><p class="muted help">{{ t('registrationHelp') }}</p><button class="secondary" @click="showRegistrationToken">{{ t(registrationToken ? 'hideToken' : 'showRegistrationToken') }}</button><Transition name="notice"><div v-if="registrationToken" class="pairing-token"><input :value="registrationToken" readonly :aria-label="t('registration')" autocomplete="off" @focus="($event.target as HTMLInputElement).select()"></div></Transition></section>
-            <section><h2>{{ t('preview') }}</h2><div class="deck-preview"><div v-for="(button, index) in state?.buttons" :key="index" class="deck-key" :class="{ disabled: button?.disabled, 'home-key': index === 14 }"><img v-if="button?.image" :src="`/api/images/${button.image}`" alt=""><Icon v-else-if="button" :name="button.icon" /><span :style="{ fontSize: `${button?.textSize ?? 14}px` }">{{ button?.label }}</span></div></div></section>
+            <section v-if="!remote" class="connection-section"><h2>{{ t('pairing') }}</h2><dl class="connection-details"><div><dt>{{ t('browser') }}</dt><dd>{{ t(state?.connected ? 'connected' : 'disconnected') }}</dd></div><div><dt>{{ t('device') }}</dt><dd>{{ t(state?.device || 'disconnected') }}</dd></div></dl><button class="secondary" @click="showToken">{{ t(token ? 'hideToken' : 'showToken') }}</button><Transition name="notice"><div v-if="token" class="pairing-token"><p class="muted">{{ t('tokenHelp') }}</p><input :value="token" readonly :aria-label="t('pairing')" autocomplete="off" @focus="($event.target as HTMLInputElement).select()"></div></Transition></section>
+            <section v-if="!remote"><h2>{{ t('registration') }}</h2><p class="muted help">{{ t('registrationHelp') }}</p><button class="secondary" @click="showRegistrationToken">{{ t(registrationToken ? 'hideToken' : 'showRegistrationToken') }}</button><Transition name="notice"><div v-if="registrationToken" class="pairing-token"><input :value="registrationToken" readonly :aria-label="t('registration')" autocomplete="off" @focus="($event.target as HTMLInputElement).select()"></div></Transition></section>
+            <section><h2>{{ t('preview') }}</h2><div class="deck-preview"><DeckKey v-for="(button, index) in state?.buttons" :key="index" :button="button" :home="index === 14" /></div></section>
           </section>
         </Transition>
       </main>
     </Transition>
     <Transition name="notice"><footer v-if="screen === 'home'" class="app-dock">
-      <nav class="dock-apps" :aria-label="t('applications')"><a v-for="app in config.apps" :key="app.id" :href="app.url" class="dock-app" :class="{ 'text-only': !app.icon && !(app.image && app.images?.[app.image]) }" :aria-disabled="editing" @click="editing && $event.preventDefault()"><span v-if="app.icon || (app.image && app.images?.[app.image])" class="app-symbol"><img v-if="app.image && app.images?.[app.image]" :src="`/api/images/${app.images[app.image]}`" alt=""><Icon v-else :name="app.icon" /></span><span>{{ app.name }}</span></a><button v-if="!editing" class="dock-add" :aria-label="t('addApp')" @click="openSettings(); addApp()"><Icon name="plus" /></button></nav>
+      <nav class="dock-apps" :aria-label="t('applications')"><a v-for="app in config.apps" :key="app.id" :href="app.url" class="dock-app" :class="{ 'text-only': !app.icon && !(app.image && app.images?.[app.image]) }" :aria-disabled="editing || remote" @click="(editing || remote) && $event.preventDefault()"><span v-if="app.icon || (app.image && app.images?.[app.image])" class="app-symbol"><img v-if="app.image && app.images?.[app.image]" :src="`/api/images/${app.images[app.image]}`" alt=""><Icon v-else :name="app.icon" /></span><span>{{ app.name }}</span></a><button v-if="!editing" class="dock-add" :aria-label="t('addApp')" @click="openSettings(); addApp()"><Icon name="plus" /></button></nav>
       <div class="dock-status"><span>{{ t('device') }}</span><span :class="{ success: state?.device === 'connected' }">{{ t(state?.device || 'disconnected') }}</span></div>
     </footer></Transition>
     <dialog ref="dialog" class="widget-dialog" aria-labelledby="widget-dialog-title" :class="{ closing: closingDialog }" @cancel.prevent="closeWidget">

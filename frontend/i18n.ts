@@ -3,6 +3,10 @@ import { ref } from 'vue';
 export const locale = ref<'en' | 'de'>('en');
 export const messages: Record<'en' | 'de', Record<string, string>> = {
   en: {
+    administration: 'Administration', adminPassword: 'Administrator password', signIn: 'Sign in', signOut: 'Sign out',
+    admin_invalid_login: 'Incorrect password.', admin_try_later: 'Too many attempts. Try again in a minute.', admin_login_required: 'Please sign in again.',
+    https_required: 'Use HTTPS to access administration.', message_too_large: 'The request is too large.',
+    iconColor: 'Icon color', textColor: 'Text color', backgroundColor: 'Background color', resetColors: 'Reset colors',
     noIcon: 'No icon', searchIcons: 'Search icons', noIconsFound: 'No matching icons', keyTextSize: 'Key text size (px)',
     registration: 'App registration', showRegistrationToken: 'Show setup credential', registrationHelp: 'Give this credential only to trusted application servers. It allows new apps to join FoxOE. Network registration requires the separate HTTPS listener.',
     home: 'Home', settings: 'Settings', editDashboard: 'Edit dashboard', done: 'Done', save: 'Save', cancel: 'Cancel', close: 'Close', back: 'Back',
@@ -28,6 +32,10 @@ export const messages: Record<'en' | 'de', Record<string, string>> = {
     defaultApp: 'New application', defaultSource: 'New data source', widget: 'Widget', documentTitle: 'FoxOE', printer: 'Printer',
   },
   de: {
+    administration: 'Verwaltung', adminPassword: 'Administratorpasswort', signIn: 'Anmelden', signOut: 'Abmelden',
+    admin_invalid_login: 'Falsches Passwort.', admin_try_later: 'Zu viele Versuche. Versuche es in einer Minute erneut.', admin_login_required: 'Bitte melde dich erneut an.',
+    https_required: 'Verwende HTTPS für den Verwaltungszugang.', message_too_large: 'Die Anfrage ist zu groß.',
+    iconColor: 'Symbolfarbe', textColor: 'Textfarbe', backgroundColor: 'Hintergrundfarbe', resetColors: 'Farben zurücksetzen',
     noIcon: 'Kein Symbol', searchIcons: 'Symbole suchen', noIconsFound: 'Keine passenden Symbole', keyTextSize: 'Tastenschriftgröße (px)',
     registration: 'App-Registrierung', showRegistrationToken: 'Einrichtungsschlüssel anzeigen', registrationHelp: 'Gib diesen Schlüssel nur an vertrauenswürdige Anwendungsserver weiter. Er erlaubt neuen Apps, sich bei FoxOE zu registrieren. Die Registrierung über das Netzwerk erfordert den separaten HTTPS-Dienst.',
     home: 'Start', settings: 'Einstellungen', editDashboard: 'Dashboard bearbeiten', done: 'Fertig', save: 'Speichern', cancel: 'Abbrechen', close: 'Schließen', back: 'Zurück',

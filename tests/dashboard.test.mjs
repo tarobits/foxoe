@@ -45,7 +45,7 @@ test('both dashboard locales cover literal UI translation keys', async () => {
   const module = ts.transpile(raw.replace("import { ref } from 'vue';", 'const ref = value => ({value});'), { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 });
   const { messages } = await import(`data:text/javascript;base64,${Buffer.from(module).toString('base64')}`);
   assert.deepEqual(Object.keys(messages.en).sort(), Object.keys(messages.de).sort());
-  for (const file of ['App.vue', 'WidgetContent.vue', 'Demo.vue', 'IconPicker.vue']) {
+  for (const file of ['App.vue', 'WidgetContent.vue', 'Demo.vue', 'IconPicker.vue', 'Access.vue', 'DeckKey.vue']) {
     const source = await readFile(new URL(`../frontend/${file}`, import.meta.url), 'utf8');
     for (const match of source.matchAll(/\bt\('([^']+)'\)/g)) assert.ok(messages.en[match[1]], `Missing ${match[1]}`);
   }
