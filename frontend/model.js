@@ -30,8 +30,9 @@ export function formatValue(value, locale) {
   return null;
 }
 
-export function widgetTitle(widget) {
-  return widget.showTitle === false ? '' : (widget.title || '').trim();
+export function widgetTitle(widget, data) {
+  const title = data ? appearance(widget, data).title ?? widget.title : widget.title;
+  return widget.showTitle === false ? '' : (title || '').trim();
 }
 
 function compare(rule, data) {
@@ -82,10 +83,14 @@ export function ruleMatches(rule, data) {
 }
 
 export function appearance(item, data) {
+  /** @type {{ textColor?: string | null, backgroundColor?: string | null, iconColor?: string | null, visible: boolean, text?: string, title?: string }} */
   const result = { textColor: item.textColor, backgroundColor: item.backgroundColor, iconColor: item.iconColor, visible: true };
   for (const rule of item.rules || []) if (ruleMatches(rule, data)) {
-    if (rule.target === 'visible') result.visible = rule.visible;
-    else if (['textColor', 'backgroundColor', 'iconColor'].includes(rule.target)) result[rule.target] = rule.color;
+    for (const action of rule.actions ?? [rule]) {
+      if (action.target === 'visible') result.visible = action.visible;
+      else if (['textColor', 'backgroundColor', 'iconColor'].includes(action.target)) result[action.target] = action.color;
+      else if (['text', 'title'].includes(action.target) && typeof action.text === 'string') result[action.target] = action.text;
+    }
   }
   return result;
 }

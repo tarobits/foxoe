@@ -183,6 +183,8 @@ textarea { resize: vertical; }
 .widget-color-fields input { width: 72px; padding: 4px; }
 .rule-editor { border-top: 1px solid var(--line); padding-top: 20px; }
 .rule-editor input[type=color] { min-width: 72px; padding: 4px; }
+.rule-action { flex-wrap: wrap; }
+.rule-action > label { flex: 1 1 150px; }
 .condition-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
 .condition-toolbar .checkbox-row { flex-direction: row; align-self: flex-end; }
 .condition-children { border-left: 1px solid var(--border-strong); padding-left: 12px; min-width: 0; }

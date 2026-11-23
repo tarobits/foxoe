@@ -6,12 +6,14 @@ import Icon from './Icon.vue';
 import IconPicker from './IconPicker.vue';
 import WidgetContent from './WidgetContent.vue';
 import ConditionEditor from './ConditionEditor.vue';
+import RuleActionsEditor from './RuleActionsEditor.vue';
 import { ruleCondition, conditionCount } from './conditions';
 import { itemFits, firstItemSpace, appearance, contentStyle } from './model.js';
 const props = defineProps<{ widget: Widget; sources: Source[]; data: Record<string, DataEntry>; now: Date }>();
 const selected = ref(''), tab = ref<'content' | 'appearance' | 'rules'>('content');
 const item = computed(() => props.widget.items.find(item => item.id === selected.value));
 const target = computed(() => item.value || props.widget);
+const requiresTextContent = computed(() => target.value.rules.some(rule => rule.actions?.some(action => action.target === 'text')));
 function addItem() {
   if (props.widget.items.length >= 24) return;
   const item: WidgetItem = { id: `item-${crypto.randomUUID().slice(0, 8)}`, kind: 'text', title: '', text: '', source: 'system', path: '', itemPath: '', unit: '', icon: 'window', row: 0, column: 0, rowSpan: 1, columnSpan: 1, rules: [], align: 'left' };
@@ -41,7 +43,7 @@ watch(() => props.widget.kind, () => { selected.value = ''; });
     <nav class="editor-tabs" :aria-label="t('widgetOptions')"><button v-for="section in (['content', 'appearance', 'rules'] as const)" :key="section" type="button" :class="{ selected: tab === section }" :aria-pressed="tab === section" @click="tab = section">{{ t(section) }}</button></nav>
     <Transition name="notice" mode="out-in">
       <div v-if="tab === 'content'" key="content" class="form-stack">
-        <div class="form-row"><label class="grow">{{ t('title') }}<input v-model="target.title" maxlength="60"></label><label>{{ t('kind') }}<select v-model="target.kind"><option v-for="kind in ['clock','value','list','text','icon', ...(!item ? ['layout'] : [])]" :key="kind" :value="kind">{{ t(kind) }}</option></select></label></div>
+        <div class="form-row"><label class="grow">{{ t('title') }}<input v-model="target.title" maxlength="60"></label><label>{{ t('kind') }}<select v-model="target.kind"><option v-for="kind in ['clock','value','list','text','icon', ...(!item ? ['layout'] : [])]" :key="kind" :value="kind" :disabled="requiresTextContent && !['text', 'value'].includes(kind)">{{ t(kind) }}</option></select></label></div>
         <label class="checkbox-row title-toggle"><input type="checkbox" :checked="target.showTitle !== false" @change="target.showTitle = ($event.target as HTMLInputElement).checked">{{ t('showTitle') }}</label>
         <template v-if="target.kind === 'layout'">
           <label class="checkbox-row"><input v-model="widget.allowOverlap" type="checkbox">{{ t('allowItemOverlap') }}</label>
@@ -76,7 +78,8 @@ watch(() => props.widget.kind, () => { selected.value = ''; });
         <div v-for="(rule, index) in target.rules" :key="index" class="rule-editor form-stack">
           <div class="section-header"><h3>{{ t('condition') }}</h3><button type="button" class="icon-button danger-text" :aria-label="t('removeRule')" @click="target.rules.splice(index, 1)"><Icon name="remove" /></button></div>
           <ConditionEditor :model-value="ruleCondition(rule)" :sources="sources" :remaining="32 - conditionCount(ruleCondition(rule))" @update:model-value="rule.condition = $event" />
-          <div class="form-row"><label>{{ t('change') }}<select v-model="rule.target"><option v-for="field in ['textColor','backgroundColor','iconColor','visible']" :key="field" :value="field">{{ t(field) }}</option></select></label><label v-if="rule.target === 'visible'">{{ t('result') }}<select v-model="rule.visible"><option :value="true">{{ t('show') }}</option><option :value="false">{{ t('hide') }}</option></select></label><label v-else>{{ t('color') }}<input type="color" :value="rule.color || '#ffffff'" @input="rule.color = ($event.target as HTMLInputElement).value"></label><div class="header-actions"><button type="button" class="icon-button" :disabled="index === 0" :aria-label="t('moveRuleUp')" @click="target.rules.splice(index - 1, 0, target.rules.splice(index, 1)[0]!)"><Icon name="arrow-up" /></button><button type="button" class="icon-button" :disabled="index === target.rules.length - 1" :aria-label="t('moveRuleDown')" @click="target.rules.splice(index + 1, 0, target.rules.splice(index, 1)[0]!)"><Icon name="arrow-down" /></button></div></div>
+          <RuleActionsEditor :rule="rule" :kind="target.kind" />
+          <div class="header-actions"><button type="button" class="icon-button" :disabled="index === 0" :aria-label="t('moveRuleUp')" @click="target.rules.splice(index - 1, 0, target.rules.splice(index, 1)[0]!)"><Icon name="arrow-up" /></button><button type="button" class="icon-button" :disabled="index === target.rules.length - 1" :aria-label="t('moveRuleDown')" @click="target.rules.splice(index + 1, 0, target.rules.splice(index, 1)[0]!)"><Icon name="arrow-down" /></button></div>
         </div>
       </div>
     </Transition>

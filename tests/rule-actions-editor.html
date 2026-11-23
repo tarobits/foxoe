@@ -1,0 +1,45 @@
+<!doctype html><html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Rule action editor regression</title>
+<style>body{overflow:auto!important}#app{max-width:640px;padding:20px;margin:auto}output{display:block;position:sticky;top:0;padding:12px;background:#111827;z-index:20}</style><output id="result">Checking actions</output><div id="app"></div>
+<script type="module">
+import {createApp,reactive,nextTick} from 'vue';
+import Editor from '/frontend/WidgetEditor.vue';
+import {locale} from '/frontend/i18n.ts';
+import '/frontend/style.css';
+const widget=reactive({id:'sample',kind:'value',title:'Original title',text:'Base',source:'system',path:'count',unit:'%',itemPath:'',padding:12,columns:[1],rows:[1],gap:0,items:[],rules:[{source:'system',path:'ready',operator:'eq',value:true,target:'textColor',color:'#00ff00',visible:true}]});
+const data=reactive({system:{value:{ready:true,count:42},error:null}});
+createApp(Editor,{widget,data,sources:[],now:new Date()}).mount('#app');
+const wait=()=>new Promise(resolve=>setTimeout(resolve,350));
+const assert=(value,message)=>{if(!value)throw new Error(message);};
+const click=text=>{const button=[...document.querySelectorAll('button')].find(el=>el.textContent.trim()===text);assert(button,'Missing '+text);button.click();};
+const input=(el,value,type='input')=>{el.value=value;el.dispatchEvent(new Event(type,{bubbles:true}));};
+const preview=()=>document.querySelector('.widget-preview-panel');
+try{
+ await wait();click('Rules');await wait();
+ assert(widget.rules[0].actions===undefined,'Opening rules mutated legacy action');
+ for(const [target,value] of [['text','Ready'],['title','Conditional title'],['backgroundColor','#112233']]){
+   click('Add action');await wait();
+   let row=[...document.querySelectorAll('.rule-action')].at(-1);
+   input(row.querySelector('select'),target,'change');await nextTick();
+   input(row.querySelector('textarea,input'),value);await nextTick();
+ }
+ await wait();
+ assert(widget.rules[0].actions.length===4,'Actions were lost');
+ assert(preview().textContent.includes('Ready') && !preview().textContent.includes('42'),'Text replacement not rendered');
+ assert(preview().textContent.includes('Conditional title'),'Title action not rendered');
+ assert(preview().style.backgroundColor==='rgb(17, 34, 51)','Background action not rendered');
+ assert(widget.title==='Original title','Rule mutated base title');
+ data.system.value.ready=false;await wait();
+ assert(preview().textContent.includes('Original title') && preview().textContent.includes('42%'),'Base values did not recover');
+ data.system.value.ready=true;await wait();
+ document.querySelectorAll('[aria-label="Remove action"]')[1].click();await wait();
+ assert(preview().textContent.includes('42%') && preview().textContent.includes('Conditional title'),'Removing action changed siblings');
+ click('Add action');await wait();
+ input([...document.querySelectorAll('.rule-action')].at(-1).querySelector('select'),'text','change');await wait();
+ assert(preview().querySelector('.metric span').textContent==='','Empty replacement is not honored');
+ assert(!preview().querySelector('.metric small'),'Unit remained on replacement text');
+ locale.value='de';await wait();
+ assert(document.body.textContent.includes('Aktion hinzufügen'),'German actions missing');
+ assert(document.documentElement.scrollWidth<=innerWidth,'Actions overflow horizontally');
+ document.querySelector('#result').textContent=`PASS ${innerWidth}px: legacy, multiple actions, text/title/colors, recovery, removal, empty text, German`;
+}catch(error){document.querySelector('#result').textContent='FAIL '+error.message;}
+</script></html>

@@ -3,6 +3,7 @@ import { ref } from 'vue';
 export const locale = ref<'en' | 'de'>('en');
 export const messages: Record<'en' | 'de', Record<string, string>> = {
   en: {
+    ruleActions: 'Actions', addRuleAction: 'Add action', removeRuleAction: 'Remove action', replacementText: 'Replacement text',
     allowItemOverlap: 'Allow overlaps', itemBounds: 'Items must fit inside the widget.',
     layout: 'Custom layout', appearance: 'Appearance', rules: 'Rules', widgetOptions: 'Widget options', editTarget: 'Edit', wholeWidget: 'Whole widget', item: 'Item', addItem: 'Add item', removeItem: 'Remove item',
     rows: 'Rows', columns: 'Columns', addRow: 'Add row', addColumn: 'Add column', removeRow: 'Remove last row', removeColumn: 'Remove last column', trackWeights: 'Sizes are relative: 2 takes twice the space of 1.', noWidgetItems: 'Add an item to this layout.',
@@ -44,6 +45,7 @@ export const messages: Record<'en' | 'de', Record<string, string>> = {
     defaultApp: 'New application', defaultSource: 'New data source', widget: 'Widget', documentTitle: 'FoxOE', printer: 'Printer',
   },
   de: {
+    ruleActions: 'Aktionen', addRuleAction: 'Aktion hinzufügen', removeRuleAction: 'Aktion entfernen', replacementText: 'Ersatztext',
     allowItemOverlap: 'Überlappungen erlauben', itemBounds: 'Elemente müssen in das Widget passen.',
     layout: 'Eigenes Layout', appearance: 'Darstellung', rules: 'Regeln', widgetOptions: 'Widget-Optionen', editTarget: 'Bearbeiten', wholeWidget: 'Gesamtes Widget', item: 'Element', addItem: 'Element hinzufügen', removeItem: 'Element entfernen',
     rows: 'Zeilen', columns: 'Spalten', addRow: 'Zeile hinzufügen', addColumn: 'Spalte hinzufügen', removeRow: 'Letzte Zeile entfernen', removeColumn: 'Letzte Spalte entfernen', trackWeights: 'Größen sind relativ: 2 belegt doppelt so viel Platz wie 1.', noWidgetItems: 'Füge diesem Layout ein Element hinzu.',

@@ -7,13 +7,13 @@ defineProps<{ widget: Widget; data: Record<string, DataEntry>; now: Date; editin
 <template>
   <div class="widget-body" :style="contentStyle(widget, data)">
     <template v-if="widget.kind === 'layout'">
-      <Transition name="notice"><h2 v-if="widgetTitle(widget)" class="layout-heading">{{ widgetTitle(widget) }}</h2></Transition>
+      <Transition name="notice"><h2 v-if="widgetTitle(widget, data)" class="layout-heading">{{ widgetTitle(widget, data) }}</h2></Transition>
       <div class="widget-layout" :style="{ gridTemplateColumns: widget.columns.map(n => `minmax(0, ${n}fr)`).join(' '), gridTemplateRows: widget.rows.map(n => `minmax(0, ${n}fr)`).join(' '), gap: `${widget.gap}px` }">
         <div v-for="item in widget.items" v-show="editing || appearance(item, data).visible" :key="item.id" class="widget-cell" :class="{ 'rule-hidden': editing && !appearance(item, data).visible }" :style="{ ...contentStyle(item, data), gridColumn: `${item.column + 1} / span ${item.columnSpan}`, gridRow: `${item.row + 1} / span ${item.rowSpan}` }">
-          <WidgetValue :widget="item" :entry="data[item.source]" :now="now" />
+          <WidgetValue :widget="item" :entry="data[item.source]" :presentation="appearance(item, data)" :now="now" />
         </div>
       </div>
     </template>
-    <WidgetValue v-else :widget="widget" :entry="data[widget.source]" :now="now" />
+    <WidgetValue v-else :widget="widget" :entry="data[widget.source]" :presentation="appearance(widget, data)" :now="now" />
   </div>
 </template>

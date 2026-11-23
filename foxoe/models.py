@@ -165,8 +165,32 @@ class ConditionGroup(StrictModel):
 Condition = Annotated[ComparisonCondition | ConditionGroup, Field(discriminator='kind')]
 
 
+class ColorAction(StrictModel):
+    target: Literal['textColor', 'backgroundColor', 'iconColor']
+    color: Color | None
+
+
+class VisibilityAction(StrictModel):
+    target: Literal['visible']
+    visible: bool = Field(strict=True)
+
+
+class TextAction(StrictModel):
+    target: Literal['text']
+    text: str = Field(max_length=1000, strict=True)
+
+
+class TitleAction(StrictModel):
+    target: Literal['title']
+    text: str = Field(max_length=60, strict=True)
+
+
+RuleAction = Annotated[ColorAction | VisibilityAction | TextAction | TitleAction, Field(discriminator='target')]
+
+
 class WidgetRule(ComparisonFields):
     condition: Condition | None = None
+    actions: list[RuleAction] | None = Field(default=None, min_length=1, max_length=16)
     target: Literal['textColor', 'backgroundColor', 'iconColor', 'visible'] = 'textColor'
     color: Color | None = None
     visible: bool = True
@@ -219,6 +243,12 @@ class WidgetContent(WidgetAppearance):
     itemPath: str = Field(default="", max_length=200)
     unit: str = Field(default="", max_length=12)
     icon: Icon | None = 'window'
+
+    @model_validator(mode='after')
+    def valid_text_actions(self):
+        if self.kind not in ('text', 'value') and any(action.target == 'text' for rule in self.rules for action in rule.actions or []):
+            raise ValueError('text_action_requires_text_or_value')
+        return self
 
 
 class WidgetItem(WidgetContent):
