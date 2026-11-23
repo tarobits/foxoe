@@ -1,0 +1,54 @@
+<!doctype html><html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Combined condition editor regression</title>
+<style>body{overflow:auto!important}#app{max-width:640px;margin:auto;padding:20px}output{display:block;position:sticky;top:0;background:#111827;color:white;padding:12px;z-index:20}</style>
+<output id="result">Running condition editor checks</output><div id="app"></div>
+<script type="module">
+import { createApp, reactive, nextTick } from 'vue';
+import WidgetEditor from '/frontend/WidgetEditor.vue';
+import { ruleMatches } from '/frontend/model.js';
+import { locale } from '/frontend/i18n.ts';
+import '/frontend/style.css';
+const widget = reactive({id:'sample',kind:'text',title:'Example widget',text:'Live rule preview',source:'system',path:'a',itemPath:'',unit:'',icon:null,padding:24,gap:8,columns:[1],rows:[1],items:[],rules:[{source:'system',path:'a',operator:'eq',value:true,target:'textColor',color:'#4ade80',visible:true}]});
+createApp(WidgetEditor,{widget,sources:[],data:{system:{value:{a:true,b:true,c:true},error:null}},now:new Date()}).mount('#app');
+const wait=()=>new Promise(resolve=>setTimeout(resolve,300));
+const click=(root,text)=>{const button=[...root.querySelectorAll('button')].find(el=>el.textContent.trim()===text);if(!button)throw new Error('Missing button '+text);button.click();};
+const input=(element,value,type='input')=>{element.value=value;element.dispatchEvent(new Event(type,{bubbles:true}));};
+const assert=(value,message)=>{if(!value)throw new Error(message);};
+const result=document.querySelector('#result');
+try {
+  await wait(); click(document,'Rules'); await wait();
+  assert(!widget.rules[0].condition,'Opening legacy rule changed configuration');
+  click(document,'Combine'); await wait();
+  let root=document.querySelector('.condition-editor');
+  input(root.querySelector('select'),'or','change'); await wait();
+  click(root.querySelector('.condition-children > .condition-editor'),'Combine'); await wait();
+  let leaves=[...root.querySelectorAll('.condition-editor')].filter(el=>!el.querySelector('.condition-children'));
+  assert(leaves.length===3,'Nested group not created');
+  for(const [index,path] of ['a','b','c'].entries()) {
+    const leaf=leaves[index];
+    input(leaf.querySelector('input[maxlength="200"]'),path);
+    await nextTick();
+    const selects=leaf.querySelectorAll('select');
+    input(selects[2],'boolean','change');
+    await nextTick();
+  }
+  await wait();
+  leaves[2].querySelector('input[type=checkbox]').click(); await wait();
+  const tree=widget.rules[0].condition;
+  assert(tree.kind==='or' && tree.children[0].kind==='and' && tree.children[1].negate,'AND / OR / NOT structure incorrect');
+  for(const a of [true,false])for(const b of [true,false])for(const c of [true,false])assert(ruleMatches(widget.rules[0],{system:{value:{a,b,c}}})===((a&&b)||!c),'Editor expression evaluates incorrectly');
+  // Remove the NOT branch, then collapse the single-child outer group.
+  root.querySelector(':scope > .form-stack > .condition-children > .condition-editor:last-child [aria-label="Remove condition"]').click(); await wait();
+  click(root,'Ungroup'); await wait();
+  assert(widget.rules[0].condition.kind==='and','Ungroup lost inner operator');
+  assert(widget.rules[0].condition.children[1].path==='b','Removing sibling changed retained condition');
+  click(root,'Add group'); await wait();
+  assert(widget.rules[0].condition.children.length===3,'Adding group failed after removal');
+  locale.value='de'; await wait();
+  assert(document.body.textContent.includes('Verknüpfung'),'German condition labels missing');
+  assert(document.documentElement.scrollWidth<=innerWidth,'Editor overflows horizontally');
+  click(document,'Inhalt'); await wait();
+  click(document,'Regeln'); await wait();
+  assert(widget.rules[0].condition.children.length===3,'Switching tabs lost groups');
+  result.textContent=`PASS ${innerWidth}px: legacy rule, nested AND/OR/NOT, removal, ungrouping, recovery, German, tabs`;
+} catch(error) { result.textContent='FAIL '+error.message; }
+</script></html>

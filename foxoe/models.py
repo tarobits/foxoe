@@ -99,7 +99,7 @@ class Configuration(StrictModel):
             for element in [widget, *widget.items]:
                 if element.kind in ("value", "list") and element.source not in sources:
                     raise ValueError("unknown_source")
-                if any(rule.source not in sources for rule in element.rules):
+                if any(source not in sources for rule in element.rules for source in rule.sources()):
                     raise ValueError("unknown_rule_source")
             for other in self.widgets[index + 1:]:
                 if widget.x < other.x + other.w and widget.x + widget.w > other.x and widget.y < other.y + other.h and widget.y + widget.h > other.y:
@@ -144,14 +144,59 @@ class DataSource(StrictModel):
         return value
 
 
-class WidgetRule(StrictModel):
+class ComparisonFields(StrictModel):
     source: str = Field(default='system', max_length=40)
     path: str = Field(default='', max_length=200)
     operator: Literal['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'contains', 'exists', 'missing', 'truthy', 'falsy'] = 'eq'
     value: Annotated[str, Field(max_length=1000, strict=True)] | Annotated[bool, Field(strict=True)] | Annotated[float, Field(strict=True, allow_inf_nan=False)] | None = ''
+
+
+class ComparisonCondition(ComparisonFields):
+    kind: Literal['comparison'] = 'comparison'
+    negate: bool = Field(default=False, strict=True)
+
+
+class ConditionGroup(StrictModel):
+    kind: Literal['and', 'or']
+    negate: bool = Field(default=False, strict=True)
+    children: list['Condition'] = Field(min_length=1, max_length=16)
+
+
+Condition = Annotated[ComparisonCondition | ConditionGroup, Field(discriminator='kind')]
+
+
+class WidgetRule(ComparisonFields):
+    condition: Condition | None = None
     target: Literal['textColor', 'backgroundColor', 'iconColor', 'visible'] = 'textColor'
     color: Color | None = None
     visible: bool = True
+
+    @field_validator('condition', mode='before')
+    @classmethod
+    def bounded_condition(cls, value):
+        # Bound the raw tree before recursive parsing, including hostile/cyclic input.
+        pending = [(value, 0)] if value is not None else []
+        count = 0
+        while pending:
+            node, depth = pending.pop()
+            count += 1
+            if count > 32 or depth > 4:
+                raise ValueError('condition_too_complex')
+            children = node.get('children', []) if isinstance(node, dict) else getattr(node, 'children', [])
+            if isinstance(children, list):
+                if len(children) > 16:
+                    raise ValueError('condition_too_complex')
+                pending.extend((child, depth + 1) for child in children)
+        return value
+
+    def sources(self):
+        pending = [self.condition] if self.condition is not None else [self]
+        while pending:
+            node = pending.pop()
+            if isinstance(node, ConditionGroup):
+                pending.extend(node.children)
+            else:
+                yield node.source
 
 
 class WidgetAppearance(StrictModel):

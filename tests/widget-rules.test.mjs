@@ -1,12 +1,48 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ruleMatches, appearance, itemFits, firstItemSpace, usesSource } from '../frontend/model.js';
+import { ruleMatches, conditionResult, appearance, itemFits, firstItemSpace, usesSource } from '../frontend/model.js';
 import { createServer } from 'vite';
 import { createSSRApp } from 'vue';
 import { renderToString } from 'vue/server-renderer';
 
 const data = { system: { value: { count: 0, text: 'ready', flag: false, nil: null, items: ['a', 'b'] }, error: null } };
 const rule = (operator, path, value) => ({ source: 'system', operator, path, value });
+const condition = (path, negate = false) => ({ kind:'comparison', ...rule('eq',path,true), negate });
+test('nested rules implement (A AND B) OR NOT C across the complete truth table', () => {
+  const tree = {kind:'or', children:[{kind:'and',children:[condition('a'),condition('b')]},condition('c',true)]};
+  const combined = {condition:tree, target:'backgroundColor', color:'#123456'};
+  const original = structuredClone(combined);
+  for (const a of [true,false]) for (const b of [true,false]) for (const c of [true,false]) {
+    const values = {system:{value:{a,b,c},error:null}};
+    assert.equal(ruleMatches(combined, values), (a && b) || !c);
+    assert.equal(ruleMatches({condition:{...tree,negate:true}}, values), !((a && b) || !c));
+    assert.equal(appearance({rules:[combined]},values).backgroundColor, ((a && b) || !c) ? '#123456' : undefined);
+  }
+  assert.deepEqual(combined, original);
+});
+test('NOT never turns unavailable sources or invalid condition trees into a match', () => {
+  const valid = condition('flag',true);
+  for (const bad of [null, {}, {kind:'eval'}, {...valid,operator:'eval'}, {...valid,negate:'true'}, {...valid,value:NaN}, {...valid,value:{}},
+    {kind:'and',children:[]}, {kind:'or',children:[valid,null]}, {kind:'and',children:Array(17).fill(valid)}]) {
+    assert.equal(conditionResult(bad,data),null);
+    assert.equal(ruleMatches({condition:{kind:'or',negate:true,children:[bad]}},data),false);
+  }
+  const cyclic = {kind:'and',children:[]}; cyclic.children.push(cyclic);
+  assert.equal(conditionResult(cyclic,data),null);
+  let deep = valid; for(let n=0;n<5;n++) deep={kind:'and',children:[deep]};
+  assert.equal(conditionResult(deep,data),null);
+  const large = {kind:'or',children:Array.from({length:16},()=>({kind:'and',children:[valid]}))};
+  assert.equal(conditionResult(large,data),null);
+  const remote = {...valid,source:'remote'};
+  for (const values of [{}, {remote:{value:{flag:false},error:'offline'}}]) {
+    assert.equal(ruleMatches({condition:remote},values),false);
+    assert.equal(ruleMatches({condition:{kind:'or',children:[valid,remote]}},{...data,...values}),false);
+  }
+  assert.equal(ruleMatches({condition:remote},{remote:{value:{flag:false},error:null}}),true);
+  const widget={kind:'text',rules:[{source:'unused',condition:{kind:'and',children:[valid,remote]}}]};
+  assert.ok(usesSource(widget,'remote')); assert.ok(usesSource(widget,'system')); assert.ok(!usesSource(widget,'unused'));
+  assert.ok(usesSource({kind:'layout',items:[widget]},'remote'));
+});
 test('rules compare types explicitly and distinguish zero, false, null, and missing', () => {
   for (const [op, path, value, expected] of [
     ['eq','count',0,true], ['eq','count','0',false], ['ne','count','0',true],

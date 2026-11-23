@@ -30,7 +30,7 @@ export function formatValue(value, locale) {
   return null;
 }
 
-export function ruleMatches(rule, data) {
+function compare(rule, data) {
   const entry = data[rule.source];
   if (!entry || entry.error) return false;
   const actual = readPath(entry.value, rule.path), expected = rule.value;
@@ -48,6 +48,33 @@ export function ruleMatches(rule, data) {
     case 'falsy': return actual === false || actual === 0 || actual === '' || actual === null;
     default: return false;
   }
+}
+
+/** Bounded, non-executable boolean trees. null means unavailable/invalid, never NOT true. */
+export function conditionResult(condition, data) {
+  let count = 0;
+  function visit(node, depth) {
+    if (!node || typeof node !== 'object' || ++count > 32 || depth > 4 || (node.negate !== undefined && typeof node.negate !== 'boolean')) return null;
+    let result;
+    if (node.kind === 'comparison') {
+      if (typeof node.source !== 'string' || typeof node.path !== 'string' || !['eq','ne','gt','gte','lt','lte','contains','exists','missing','truthy','falsy'].includes(node.operator)) return null;
+      if (node.value !== null && !['string','number','boolean'].includes(typeof node.value) || typeof node.value === 'number' && !Number.isFinite(node.value)) return null;
+      const entry = Object.hasOwn(data, node.source) ? data[node.source] : null;
+      if (!entry || entry.error) return null;
+      result = compare(node, data);
+    } else if (node.kind === 'and' || node.kind === 'or') {
+      if (!Array.isArray(node.children) || !node.children.length || node.children.length > 16) return null;
+      const values = node.children.map(child => visit(child, depth + 1));
+      if (values.includes(null)) return null;
+      result = node.kind === 'and' ? values.every(Boolean) : values.some(Boolean);
+    } else return null;
+    return node.negate ? !result : result;
+  }
+  return visit(condition, 0);
+}
+
+export function ruleMatches(rule, data) {
+  return rule.condition != null ? conditionResult(rule.condition, data) === true : compare(rule, data);
 }
 
 export function appearance(item, data) {
@@ -83,7 +110,8 @@ export function firstItemSpace(item, widget) {
 }
 
 export function usesSource(widget, source) {
-  return [widget, ...(widget.items || [])].some(item => (['value', 'list'].includes(item.kind) && item.source === source) || item.rules?.some(rule => rule.source === source));
+  const references = node => node.kind === 'and' || node.kind === 'or' ? node.children.some(references) : node.source === source;
+  return [widget, ...(widget.items || [])].some(item => (['value', 'list'].includes(item.kind) && item.source === source) || item.rules?.some(rule => references(rule.condition || rule)));
 }
 
 export function listPage(value) {

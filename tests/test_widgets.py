@@ -134,3 +134,87 @@ def test_disabling_item_overlap_is_atomic_and_can_recover(tmp_path):
         assert client.get('/api/config').json() == saved
         changed['widgets'][0]['items'][1]['column'] = 1
         assert client.put('/api/config', json=changed, headers=headers).status_code == 200
+
+
+def comparison(source='system'):
+    return {'kind': 'comparison', 'source': source, 'path': 'ready', 'operator': 'eq', 'value': True}
+
+
+def combined_condition():
+    return {'kind': 'or', 'children': [
+        {'kind': 'and', 'children': [comparison(), comparison()]},
+        {**comparison(), 'negate': True},
+    ]}
+
+
+def test_combined_conditions_round_trip_and_legacy_rules_still_load(tmp_path):
+    legacy = WidgetRule(path='ready', value=True)
+    combined = WidgetRule(condition=combined_condition(), target='visible', visible=False)
+    store = Store(tmp_path)
+    config = store.load()
+    config.widgets = [Widget(id='grouped', kind='layout', rules=[legacy], items=[
+        WidgetItem(id='child', kind='text', rules=[combined])])]
+    store.save(config)
+    saved = Store(tmp_path).load().widgets[0]
+    assert saved.rules[0].condition is None
+    assert saved.rules[0].path == 'ready'
+    assert saved.items[0].rules[0] == combined
+    assert list(combined.sources()) == ['system'] * 3
+
+
+@pytest.mark.parametrize('condition', [
+    {}, {'kind': 'eval'}, {'kind': 'and', 'children': []},
+    {'kind': 'or', 'children': [None]}, {'kind': 'and', 'children': [comparison()] * 17},
+    {**comparison(), 'negate': 'true'}, {**comparison(), 'operator': 'eval'},
+    {**comparison(), 'value': float('inf')}, {**comparison(), 'children': []},
+    {'kind': 'or', 'children': [comparison()], 'source': 'system'},
+    {'kind': 'or', 'children': [{'kind': 'and', 'children': [comparison()]}] * 16},
+])
+def test_combined_condition_rejects_malformed_input(condition):
+    with pytest.raises(ValidationError):
+        WidgetRule(condition=condition)
+
+
+def test_condition_depth_and_total_node_limits():
+    tree = comparison()
+    for _ in range(4):
+        tree = {'kind': 'and', 'children': [tree]}
+    WidgetRule(condition=tree)
+    with pytest.raises(ValidationError, match='condition_too_complex'):
+        WidgetRule(condition={'kind': 'and', 'children': [tree]})
+    cyclic = {'kind': 'and', 'children': []}
+    cyclic['children'].append(cyclic)
+    with pytest.raises(ValidationError, match='condition_too_complex'):
+        WidgetRule(condition=cyclic)
+    # Root + 15 two-node groups + one leaf = exactly 32 nodes.
+    maximum = {'kind': 'or', 'children': [{'kind': 'and', 'children': [comparison()]} for _ in range(15)] + [comparison()]}
+    WidgetRule(condition=maximum)
+    maximum['children'][-1] = {'kind': 'and', 'children': [comparison()]}
+    with pytest.raises(ValidationError, match='condition_too_complex'):
+        WidgetRule(condition=maximum)
+
+
+def test_nested_source_validation_failed_save_and_recovery(tmp_path):
+    with TestClient(create_app(tmp_path, hardware=False), base_url='http://127.0.0.1:8765') as client:
+        headers = {'origin': 'http://127.0.0.1:8765'}
+        before = client.get('/api/config').json()
+        changed = json.loads(json.dumps(before))
+        tree = combined_condition()
+        tree['children'][0]['children'][1]['source'] = 'unregistered'
+        changed['widgets'][0]['rules'] = [{'condition': tree}]
+        assert client.put('/api/config', json=changed, headers=headers).status_code == 422
+        assert client.get('/api/config').json() == before
+        # The same nested references are checked on individual items.
+        with pytest.raises(ValidationError, match='unknown_rule_source'):
+            Configuration(widgets=[Widget(id='custom', kind='layout', items=[
+                WidgetItem(id='child', kind='text', rules=[WidgetRule(condition=tree)])])])
+        tree['children'][0]['children'][1]['source'] = 'system'
+        assert client.put('/api/config', json=changed, headers=headers).status_code == 200
+        saved = client.get('/api/config').json()
+        assert saved['widgets'][0]['rules'][0]['condition']['kind'] == 'or'
+        changed = json.loads(json.dumps(saved))
+        changed['widgets'][0]['rules'][0]['condition'] = {'kind': 'and', 'children': []}
+        assert client.put('/api/config', json=changed, headers=headers).status_code == 422
+        assert client.get('/api/config').json() == saved
+        saved['widgets'][0]['rules'] = []
+        assert client.put('/api/config', json=saved, headers=headers).status_code == 200

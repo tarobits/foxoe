@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import type { Widget, WidgetItem, WidgetRule, Source, DataEntry } from './types';
+import type { Widget, WidgetItem, Source, DataEntry } from './types';
 import { t } from './i18n';
 import Icon from './Icon.vue';
 import IconPicker from './IconPicker.vue';
 import WidgetContent from './WidgetContent.vue';
+import ConditionEditor from './ConditionEditor.vue';
+import { ruleCondition, conditionCount } from './conditions';
 import { itemFits, firstItemSpace, appearance, contentStyle } from './model.js';
 const props = defineProps<{ widget: Widget; sources: Source[]; data: Record<string, DataEntry>; now: Date }>();
 const selected = ref(''), tab = ref<'content' | 'appearance' | 'rules'>('content');
 const item = computed(() => props.widget.items.find(item => item.id === selected.value));
 const target = computed(() => item.value || props.widget);
-const unary = ['exists', 'missing', 'truthy', 'falsy'];
-const operators: WidgetRule['operator'][] = ['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'contains', 'exists', 'missing', 'truthy', 'falsy'];
 function addItem() {
   if (props.widget.items.length >= 24) return;
   const item: WidgetItem = { id: `item-${crypto.randomUUID().slice(0, 8)}`, kind: 'text', title: '', text: '', source: 'system', path: '', itemPath: '', unit: '', icon: 'window', row: 0, column: 0, rowSpan: 1, columnSpan: 1, rules: [], align: 'left' };
@@ -28,11 +28,6 @@ function canRemoveTrack(axis: 'rows' | 'columns') {
 }
 function addRule() {
   target.value.rules.push({ source: target.value.source, path: target.value.path, operator: 'eq', value: '', target: 'textColor', color: '#4ade80', visible: true });
-}
-function valueType(rule: WidgetRule) { return rule.value === null ? 'null' : typeof rule.value; }
-function setType(rule: WidgetRule, event: Event) {
-  const type = (event.target as HTMLSelectElement).value;
-  rule.value = type === 'number' ? 0 : type === 'boolean' ? true : type === 'null' ? null : '';
 }
 watch(() => props.widget.kind, () => { selected.value = ''; });
 </script>
@@ -78,8 +73,8 @@ watch(() => props.widget.kind, () => { selected.value = ''; });
         <div class="section-header"><h3>{{ t('rules') }}</h3><button type="button" class="secondary" :disabled="target.rules.length >= 16" @click="addRule"><Icon name="plus" />{{ t('addRule') }}</button></div>
         <p class="muted help">{{ t('ruleOrder') }}</p>
         <div v-for="(rule, index) in target.rules" :key="index" class="rule-editor form-stack">
-          <div class="form-row"><label>{{ t('source') }}<select v-model="rule.source"><option value="system">{{ t('system') }}</option><option v-for="source in sources" :key="source.id" :value="source.id">{{ source.name }}</option></select></label><label class="grow">{{ t('path') }}<input v-model="rule.path" maxlength="200" spellcheck="false"></label><button type="button" class="icon-button danger-text" :aria-label="t('removeRule')" @click="target.rules.splice(index, 1)"><Icon name="remove" /></button></div>
-          <div class="form-row"><label>{{ t('comparison') }}<select v-model="rule.operator"><option v-for="operator in operators" :key="operator" :value="operator">{{ t(`op_${operator}`) }}</option></select></label><template v-if="!unary.includes(rule.operator)"><label>{{ t('valueType') }}<select :value="valueType(rule)" @change="setType(rule, $event)"><option v-for="type in ['string','number','boolean','null']" :key="type" :value="type">{{ t(`type_${type}`) }}</option></select></label><label v-if="rule.value !== null">{{ t('value') }}<input v-if="typeof rule.value === 'number'" v-model.number="rule.value" type="number" step="any" required><select v-else-if="typeof rule.value === 'boolean'" v-model="rule.value"><option :value="true">{{ t('yes') }}</option><option :value="false">{{ t('no') }}</option></select><input v-else v-model="rule.value" maxlength="1000"></label></template></div>
+          <div class="section-header"><h3>{{ t('condition') }}</h3><button type="button" class="icon-button danger-text" :aria-label="t('removeRule')" @click="target.rules.splice(index, 1)"><Icon name="remove" /></button></div>
+          <ConditionEditor :model-value="ruleCondition(rule)" :sources="sources" :remaining="32 - conditionCount(ruleCondition(rule))" @update:model-value="rule.condition = $event" />
           <div class="form-row"><label>{{ t('change') }}<select v-model="rule.target"><option v-for="field in ['textColor','backgroundColor','iconColor','visible']" :key="field" :value="field">{{ t(field) }}</option></select></label><label v-if="rule.target === 'visible'">{{ t('result') }}<select v-model="rule.visible"><option :value="true">{{ t('show') }}</option><option :value="false">{{ t('hide') }}</option></select></label><label v-else>{{ t('color') }}<input type="color" :value="rule.color || '#ffffff'" @input="rule.color = ($event.target as HTMLInputElement).value"></label><div class="header-actions"><button type="button" class="icon-button" :disabled="index === 0" :aria-label="t('moveRuleUp')" @click="target.rules.splice(index - 1, 0, target.rules.splice(index, 1)[0]!)"><Icon name="arrow-up" /></button><button type="button" class="icon-button" :disabled="index === target.rules.length - 1" :aria-label="t('moveRuleDown')" @click="target.rules.splice(index + 1, 0, target.rules.splice(index, 1)[0]!)"><Icon name="arrow-down" /></button></div></div>
         </div>
       </div>

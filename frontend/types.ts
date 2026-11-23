@@ -3,7 +3,9 @@ export type { IconName } from './icons';
 export interface KeyColors { iconColor?: string | null; textColor?: string | null; backgroundColor?: string | null }
 export interface Application extends KeyColors { id: string; name: string; url: string; icon: IconName | null; textSize: number; image?: string | null; images?: Record<string, string>; screens?: unknown[] }
 export interface Source { id: string; name: string; url: string; interval: number; authEnv: string }
-export interface WidgetRule { source: string; path: string; operator: 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains' | 'exists' | 'missing' | 'truthy' | 'falsy'; value: string | number | boolean | null; target: 'textColor' | 'backgroundColor' | 'iconColor' | 'visible'; color: string | null; visible: boolean }
+export interface ComparisonFields { source: string; path: string; operator: 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains' | 'exists' | 'missing' | 'truthy' | 'falsy'; value: string | number | boolean | null }
+export type Condition = (ComparisonFields & { kind: 'comparison'; negate?: boolean }) | { kind: 'and' | 'or'; negate?: boolean; children: Condition[] };
+export interface WidgetRule extends ComparisonFields { condition?: Condition | null; target: 'textColor' | 'backgroundColor' | 'iconColor' | 'visible'; color: string | null; visible: boolean }
 export interface WidgetAppearance { textColor?: string | null; backgroundColor?: string | null; iconColor?: string | null; fontSize?: number | null; align?: 'left' | 'center' | 'right'; rules: WidgetRule[] }
 export interface WidgetElement extends WidgetAppearance { id: string; kind: 'clock' | 'text' | 'value' | 'list' | 'icon' | 'layout'; title: string; text: string; source: string; path: string; itemPath: string; unit: string; icon?: IconName | null }
 export interface WidgetItem extends WidgetElement { row: number; column: number; rowSpan: number; columnSpan: number }

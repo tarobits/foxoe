@@ -182,6 +182,12 @@ textarea { resize: vertical; }
 .widget-color-fields input { width: 72px; padding: 4px; }
 .rule-editor { border-top: 1px solid var(--line); padding-top: 20px; }
 .rule-editor input[type=color] { min-width: 72px; padding: 4px; }
+.condition-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.condition-toolbar .checkbox-row { flex-direction: row; align-self: flex-end; }
+.condition-children { border-left: 1px solid var(--border-strong); padding-left: 12px; min-width: 0; }
+.condition-children > .condition-editor + .condition-editor { border-top: 1px solid var(--line); padding-top: 16px; }
+.condition-editor .form-row { flex-wrap: wrap; }
+.condition-editor .form-row > label { min-width: 0; flex: 1 1 120px; }
 .widget-preview-panel { height: 180px; margin-top: 12px; background: var(--surface); border-radius: 6px; overflow: auto; }
 .dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
 .dialog-body { overflow: auto; padding: 20px 24px; }

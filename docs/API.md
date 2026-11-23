@@ -237,3 +237,35 @@ numbers. `exists` excludes missing and null values; `missing` matches both.
 matches false, zero, empty strings, and null. Missing paths otherwise do not
 match. Unavailable or stale sources never trigger rules. Rules run in order,
 with the last matching rule winning for each property. No code is evaluated.
+
+For combined logic, supply `condition` on the rule. It replaces the rule's
+top-level comparison fields; omitting it (or setting it to null) retains the
+single-comparison behavior. A comparison node has `kind: "comparison"` and the
+same `source`, `path`, `operator`, and `value` fields. An `and` or `or` node has a
+nonempty `children` array. Any node may set `negate: true` for NOT.
+
+This example expresses `(ready AND online) OR NOT paused`:
+
+```json
+{
+  "condition": {
+    "kind": "or",
+    "children": [
+      {"kind": "and", "children": [
+        {"kind": "comparison", "source": "system", "path": "ready", "operator": "eq", "value": true},
+        {"kind": "comparison", "source": "system", "path": "online", "operator": "eq", "value": true}
+      ]},
+      {"kind": "comparison", "source": "system", "path": "paused", "operator": "eq", "value": true, "negate": true}
+    ]
+  },
+  "target": "textColor",
+  "color": "#4ade80"
+}
+```
+
+The paths above are illustrative; use fields supplied by your registered data
+source. Trees allow up to 32 nodes, 16 children per group, and four nesting edges
+below the root. All referenced sources must exist. If any referenced source is
+unavailable, the entire rule does not apply, including negated rules. On an
+available source, NOT inverts the comparison result; use `exists` when a field
+must be present. These conditions work on both widgets and their individual items.
