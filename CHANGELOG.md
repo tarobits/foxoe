@@ -7,6 +7,27 @@ GitHub release tags use the `v` prefix, for example `v1.0.0`.
 
 ## [Unreleased]
 
+## [0.1.0-pre5] - 2026-11-23
+
+**Test version / proof of concept.** These changes still require validation on
+the physical Raspberry Pi, Stream Deck, and live Chromium setup.
+
+### Added
+
+- Icon, text, and background colors for Stream Deck buttons and app launcher keys, configurable through dashboard settings and the application API, with a preview and reset to defaults.
+- Optional password-protected HTTPS dashboard administration from another computer, with self-signed certificate setup that runs as the kiosk user without sudo.
+- Automatic extension updates alongside FoxOE, including restoration of extension files if deployment fails.
+
+### Changed
+
+- Managed installations load the Chromium extension from a stable `extension/` directory instead of `current/extension`.
+
+Existing installations require a one-time extension migration after updating:
+run `bash ~/.local/share/foxoe/current/update.sh --sync-extension`, remove the old
+extension in Chromium, load `~/.local/share/foxoe/extension/` unpacked, pair it
+again, and reload the kiosk page once. See the
+[deployment guide](docs/DEPLOYMENT.md#automatic-extension-updates).
+
 ## [0.1.0-pre4] - 2026-11-23
 
 **Test version / proof of concept.** These changes still require validation on
@@ -65,7 +86,8 @@ extension session have not yet been validated on the target setup.
 - English and German interfaces.
 - Raspberry Pi OS/Debian installation and updates from published GitHub releases, with remembered stable/beta channels, data preservation, and recovery after a failed activation.
 
-[Unreleased]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre4...main
+[Unreleased]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre5...main
+[0.1.0-pre5]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre4...v0.1.0-pre5
 [0.1.0-pre4]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre3...v0.1.0-pre4
 [0.1.0-pre3]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre2...v0.1.0-pre3
 [0.1.0-pre2]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre1...v0.1.0-pre2
