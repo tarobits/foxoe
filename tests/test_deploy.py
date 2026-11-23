@@ -17,6 +17,19 @@ deploy = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(deploy)
 
 
+@pytest.mark.parametrize('name', ['update.sh', 'install.sh', 'setup-system.sh'])
+def test_shell_entry_points_are_directly_executable_from_another_directory(tmp_path, name):
+    script = Path(__file__).parents[1] / name
+    assert script.stat().st_mode & 0o111 == 0o111, f'{name} must retain its executable bit in release checkouts'
+    # Help and invalid arguments must exit before platform checks or deployment
+    # mutations, and the wrappers must locate Python relative to their own path.
+    for args, expected in [(['--help'], 0), (['--not-a-foxoe-option'], 2)]:
+        result = subprocess.run([str(script), *args], cwd=tmp_path, capture_output=True, text=True, timeout=10)
+        assert result.returncode == expected, result.stderr
+        assert 'usage:' in (result.stdout + result.stderr).lower()
+    assert not list(tmp_path.iterdir())
+
+
 @pytest.fixture
 def installation(tmp_path, monkeypatch):
     root = tmp_path / 'install'
