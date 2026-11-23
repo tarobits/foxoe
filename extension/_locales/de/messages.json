@@ -2,6 +2,8 @@
   "description": {"message": "Verbindet die aktive Kiosk-Anwendung mit FoxOE und dem Stream Deck."},
   "connectTab": {"message": "Diesen Tab als FoxOE-Kiosk verwenden"},
   "home": {"message": "Start"},
+  "showHome": {"message": "Start-Schaltfläche anzeigen"},
+  "hideHome": {"message": "Start-Schaltfläche ausblenden"},
   "setupHelp": {"message": "Verwende diese Erweiterung im eigenen Kiosk-Browserprofil. Kopiere den Verbindungsschlüssel aus den FoxOE-Einstellungen, öffne das Dashboard und wähle den Kiosk-Tab über das FoxOE-Symbol in der Symbolleiste aus."},
   "connectionToken": {"message": "Verbindungsschlüssel"},
   "saveConnection": {"message": "Verbindung speichern"},
