@@ -1,4 +1,4 @@
-"""User-owned Git releases; only OS prerequisites and USB setup require sudo.
+"""User-owned Git releases; privileged prerequisites are prepared separately.
 
 Builds never modify the active release. A durable activation journal allows the
 next invocation to recover an interrupted switch, including the old data format.
@@ -194,16 +194,14 @@ WantedBy=default.target
 '''
 
 
-def prerequisites(skip_system):
-    if not skip_system:
-        run('sudo', 'apt-get', 'update')
-        run('sudo', 'apt-get', 'install', '-y', 'git', 'ca-certificates', 'python3-venv',
-            'python3-dev', 'build-essential', 'libhidapi-libusb0', 'fonts-dejavu-core',
-            'libjpeg-dev', 'zlib1g-dev')
+def prerequisites():
     for command in ('git', 'systemctl'):
         if not shutil.which(command):
-            raise DeploymentError(f'Missing prerequisite: {command}.')
-    systemctl('show-environment', capture=True)
+            raise DeploymentError(f'Missing prerequisite: {command}. Ask an administrator to run setup-system.sh --user <kiosk-user>.')
+    try:
+        systemctl('show-environment', capture=True)
+    except subprocess.CalledProcessError:
+        raise DeploymentError('The user service manager is unavailable. Log in directly as the kiosk user after administrator setup.') from None
 
 
 def build_environment(root):
@@ -368,16 +366,6 @@ def activate(root, release, config):
         raise
 
 
-def install_usb(release):
-    user = run('id', '-un', capture=True)
-    run('sudo', 'groupadd', '-f', 'plugdev')
-    run('sudo', 'usermod', '-aG', 'plugdev', user)
-    run('sudo', 'install', '-m', '0644', release / 'deploy/60-foxoe-streamdeck.rules',
-        '/etc/udev/rules.d/60-foxoe-streamdeck.rules')
-    run('sudo', 'udevadm', 'control', '--reload-rules')
-    run('loginctl', 'enable-linger', user)
-
-
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=('install', 'update'))
@@ -385,13 +373,13 @@ def main(argv=None):
     parser.add_argument('--repository', default=REPOSITORY, help='Install source; updates use the saved repository')
     parser.add_argument('--version', help='Published tag, e.g. v1.0.0; default is highest eligible semantic version')
     parser.add_argument('--channel', choices=('stable', 'beta'), help='Remembered update channel; defaults to stable on install')
-    parser.add_argument('--skip-system-deps', action='store_true', help='Skip apt, USB rules/group and boot lingering setup')
+    parser.add_argument('--skip-system-deps', action='store_true', help='Compatibility option; system setup is always separate now')
     parser.add_argument('--recover', action='store_true', help='Restore an interrupted activation without fetching an update')
     args = parser.parse_args(argv)
     if sys.version_info < (3, 11) or platform.system() != 'Linux':
         parser.error('Use Raspberry Pi OS/Debian Linux with Python 3.11 or newer.')
     if os.geteuid() == 0:
-        parser.error('Run as the kiosk user, without sudo. The installer requests sudo for OS setup only.')
+        parser.error('Run as the kiosk user, without sudo. Administrators use setup-system.sh for system setup.')
     if args.action == 'update' and args.repository != REPOSITORY:
         parser.error('Updates use the saved repository; source changes must be explicit in installation.json.')
     root = checked_path(args.directory).resolve()
@@ -437,15 +425,13 @@ def main(argv=None):
             print(f'FoxOE {config["version"]} is already installed; update channel: {channel}.')
             return
         print(f'Preparing FoxOE {selected["tag_name"]}…', flush=True)
-        prerequisites(args.skip_system_deps or args.action == 'update')
+        prerequisites()
         env = build_environment(root)
         release, config = prepare_release(root, config['repository'], selected['tag_name'], env)
         config['channel'] = channel
         created_unit = False
         try:
             if not installed:
-                if not args.skip_system_deps:
-                    install_usb(release)
                 unit.parent.mkdir(parents=True, exist_ok=True)
                 with open(unit, 'x') as output:
                     created_unit = True
@@ -461,8 +447,6 @@ def main(argv=None):
     print(f'FoxOE {config["version"]} ready at http://127.0.0.1:8765/ (commit {config["commit"][:12]}).')
     print(f'Changelog: {root}/current/CHANGELOG.md')
     print(f'Extension directory: {root}/current/extension')
-    if args.action == 'install' and not args.skip_system_deps:
-        print('Reboot once and reconnect the Stream Deck to apply USB group membership.')
 
 
 def cancel_deployment(*_):

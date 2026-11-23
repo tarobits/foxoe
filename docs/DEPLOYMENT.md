@@ -1,15 +1,25 @@
 # Installing and updating FoxOE
 
 The scripts target Raspberry Pi OS/Debian Linux with systemd and Python 3.11+.
-Run them as the ordinary kiosk user in a login session with a working user service
-manager. Do not run the scripts themselves with `sudo`. Installation requests
-privileges only for OS packages and USB access; user lingering enables the service
-at boot. Chromium profile setup and extension pairing remain manual.
+Run installation and updates as the ordinary kiosk user in a login session with
+a working user service manager. This account does not need sudo access. A separate
+administrator setup prepares OS packages, USB access and user lingering for boot
+startup. Chromium profile setup and extension pairing remain manual.
 
 ## Install
 
 Download/extract the project source or clone `https://github.com/tarobits/foxoe.git`,
-then run:
+then have an administrator run the following, replacing `kiosk` with the existing
+account that will run FoxOE:
+
+```sh
+sudo bash setup-system.sh --user kiosk
+```
+
+An administrator already logged in as root uses `bash setup-system.sh --user kiosk`
+without `sudo`. Setup does not create the account, grant it sudo access, build
+application dependencies, or write application files into its home directory.
+Reboot once and reconnect the deck, then log in directly as that kiosk user and run:
 
 ```sh
 bash install.sh
@@ -19,7 +29,7 @@ Development uses `main`, but installation never deploys its untagged commits.
 The installer queries published GitHub releases, selects the highest eligible
 semantic version, fetches its exact Git tag, and builds it. The initial channel
 is `stable`. Draft releases, unpublished tags, and non-SemVer tags are excluded.
-If no eligible release exists, installation stops before OS setup.
+If no eligible release exists, installation stops without installing an application.
 
 Options:
 
@@ -27,12 +37,11 @@ Options:
 bash install.sh --version v1.0.0
 bash install.sh --channel beta --version v1.1.0-beta.1
 bash install.sh --directory "$HOME/foxoe-runtime"
-bash install.sh --skip-system-deps
 ```
 
-`--skip-system-deps` skips apt packages, USB rules/group membership, and lingering.
-Use it only when those prerequisites are already configured. The installer will
-still prepare Python dependencies and the frontend toolchain. Supported Node.js
+System setup is always separate. The old `--skip-system-deps` option remains a
+compatibility no-op. The installer prepares Python dependencies and the frontend
+toolchain entirely as the kiosk user. Supported Node.js
 and npm are reused; otherwise a pinned official Node.js 22 archive for ARMv7,
 ARM64, or x64 is downloaded over HTTPS and verified against its SHA-256 manifest.
 No Node installation is made system-wide. Builds require internet access to

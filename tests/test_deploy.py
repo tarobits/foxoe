@@ -324,7 +324,7 @@ def test_fresh_install_failure_cleans_unit_and_can_be_retried(tmp_path, monkeypa
         return candidate, {'repository': deploy.REPOSITORY, 'version': 'v1.0.0', 'commit': 'test'}
     monkeypatch.setattr(deploy, 'prepare_release', prepare)
     monkeypatch.setattr(deploy, 'healthy', lambda *_: (_ for _ in ()).throw(deploy.DeploymentError('failed health')))
-    command = ['install', '--directory', str(root), '--skip-system-deps', '--channel', 'beta']
+    command = ['install', '--directory', str(root), '--channel', 'beta']
     with pytest.raises(deploy.DeploymentError, match='health'):
         deploy.main(command)
     unit = tmp_path / '.config/systemd/user/foxoe.service'
@@ -347,3 +347,27 @@ def test_installer_does_not_adopt_unmanaged_data(tmp_path, monkeypatch):
     with pytest.raises(deploy.DeploymentError, match='Unmanaged'):
         deploy.main(['install', '--directory', str(tmp_path)])
     assert marker.read_text() == 'existing application data'
+
+
+def test_user_prerequisites_never_request_elevation(monkeypatch):
+    monkeypatch.setattr(deploy.shutil, 'which', lambda name: '/usr/bin/' + name)
+    calls = []
+    monkeypatch.setattr(deploy, 'run', lambda *args, **kwargs: calls.append(args))
+    deploy.prerequisites()
+    assert calls == [('systemctl', '--user', 'show-environment')]
+
+
+def test_missing_user_prerequisite_stops_without_privileged_fallback(monkeypatch):
+    monkeypatch.setattr(deploy.shutil, 'which', lambda name: None)
+    monkeypatch.setattr(deploy, 'run', lambda *a, **kw: pytest.fail('Unexpected command execution'))
+    with pytest.raises(deploy.DeploymentError, match='administrator'):
+        deploy.prerequisites()
+
+
+def test_unavailable_user_bus_has_actionable_error_and_allows_retry(monkeypatch):
+    monkeypatch.setattr(deploy.shutil, 'which', lambda name: '/usr/bin/' + name)
+    monkeypatch.setattr(deploy, 'systemctl', lambda *a, **kw: (_ for _ in ()).throw(subprocess.CalledProcessError(1, 'systemctl')))
+    with pytest.raises(deploy.DeploymentError, match='Log in directly'):
+        deploy.prerequisites()
+    monkeypatch.setattr(deploy, 'systemctl', lambda *a, **kw: '')
+    deploy.prerequisites()
