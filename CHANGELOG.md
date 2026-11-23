@@ -7,6 +7,24 @@ GitHub release tags use the `v` prefix, for example `v1.0.0`.
 
 ## [Unreleased]
 
+## [0.1.0-pre3] - 2026-11-23
+
+**Test version / proof of concept.** Target hardware and live Chromium integration
+still require validation for these changes.
+
+### Added
+
+- Fox illustration for the dashboard and browser extension, with built-in action icons and a house icon on Stream Deck keys.
+
+### Fixed
+
+- Correct generated systemd paths and avoid stopping a nonexistent service during fresh installation.
+- Detect port conflicts before a fresh installation builds, and provide readable service logs for new installations with clearer health-check errors.
+- Retry the browser's initial page connection automatically without requiring a settings save, and prevent duplicate startup connections.
+
+After updating, reload the unpacked FoxOE extension in Chromium to activate its
+connection fixes and new icon. The service updater does not reload Chromium.
+
 ## [0.1.0-pre2] - 2026-11-23
 
 **Test version / proof of concept.** Target hardware and live Chromium integration
@@ -32,6 +50,7 @@ extension session have not yet been validated on the target setup.
 - English and German interfaces.
 - Raspberry Pi OS/Debian installation and updates from published GitHub releases, with remembered stable/beta channels, data preservation, and recovery after a failed activation.
 
-[Unreleased]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre2...main
+[Unreleased]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre3...main
+[0.1.0-pre3]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre2...v0.1.0-pre3
 [0.1.0-pre2]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre1...v0.1.0-pre2
 [0.1.0-pre1]: https://github.com/tarobits/foxoe/releases/tag/v0.1.0-pre1
