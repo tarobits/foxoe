@@ -37,9 +37,27 @@ try{
  input([...document.querySelectorAll('.rule-action')].at(-1).querySelector('select'),'text','change');await wait();
  assert(preview().querySelector('.metric span').textContent==='','Empty replacement is not honored');
  assert(!preview().querySelector('.metric small'),'Unit remained on replacement text');
+ // Switch to an icon item after removing the text-only action.
+ document.querySelectorAll('[aria-label="Remove action"]')[3].click();await wait();
+ widget.kind='icon';widget.icon='home';await wait();
+ click('Add action');await wait();
+ let iconRow=[...document.querySelectorAll('.rule-action')].at(-1);
+ input(iconRow.querySelector('select'),'icon','change');await wait();
+ input(iconRow.querySelector('.icon-picker input'),'user');await wait();
+ input(iconRow.querySelector('.icon-picker select'),'user','change');await wait();
+ assert(preview().querySelector('use').getAttribute('href').endsWith('#user'),'Icon action not rendered');
+ assert(preview().textContent.includes('Conditional title'),'Icon change lost sibling action');
+ data.system.value.ready=false;await wait();
+ assert(preview().querySelector('use').getAttribute('href').endsWith('#home'),'Base icon did not recover');
+ data.system.value.ready=true;await wait();
+ input(iconRow.querySelector('.icon-picker select'),'','change');await wait();
+ assert(!preview().querySelector('svg,img'),'No icon did not hide icon');
+ click('Content');await wait();
+ assert([...document.querySelectorAll('option')].some(option=>option.value==='text'&&option.disabled),'Incompatible kind allowed');
+ click('Rules');await wait();
  locale.value='de';await wait();
  assert(document.body.textContent.includes('Aktion hinzufügen'),'German actions missing');
  assert(document.documentElement.scrollWidth<=innerWidth,'Actions overflow horizontally');
- document.querySelector('#result').textContent=`PASS ${innerWidth}px: legacy, multiple actions, text/title/colors, recovery, removal, empty text, German`;
+ document.querySelector('#result').textContent=`PASS ${innerWidth}px: multiple actions, text/title/colors/icons, recovery, removal, no icon, kind guard, German`;
 }catch(error){document.querySelector('#result').textContent='FAIL '+error.message;}
 </script></html>

@@ -53,3 +53,29 @@ test('text and title actions render safely on widgets and items and preserve tit
     assert.equal(legacy.actions,undefined);
   }finally{await server.close();}
 });
+
+test('icon actions render replacements, explicit no icon, and restore standalone and nested content',async()=>{
+  const server=await createServer({server:{middlewareMode:true,watch:null,ws:false},optimizeDeps:{noDiscovery:true,entries:[]},appType:'custom'});
+  try{
+    const {default:Content}=await server.ssrLoadModule('/frontend/WidgetContent.vue');
+    const {default:Editor}=await server.ssrLoadModule('/frontend/RuleActionsEditor.vue');
+    const base={id:'symbol',kind:'icon',icon:'home',title:'',rules:[{...match,actions:[{target:'icon',icon:'user'},{target:'iconColor',color:'#00ff00'}]}]};
+    const original=structuredClone(base);
+    const render=(widget,values=data)=>renderToString(createSSRApp(Content,{widget,data:values,now:new Date()}));
+    for(const nested of [false,true]){
+      const wrap=icon=>nested?{kind:'layout',title:'',columns:[1],rows:[1],gap:0,rules:[],items:[{...icon,row:0,column:0,rowSpan:1,columnSpan:1}]}:icon;
+      assert.match(await render(wrap(base)), /heroicons.svg#user/);
+      for(const values of [{},{system:{value:{ready:false},error:null}},{system:{value:{ready:true},error:'offline'}}])
+        assert.match(await render(wrap(base),values), /heroicons.svg#home/);
+      const hidden=structuredClone(base);hidden.rules[0].actions.push({target:'icon',icon:null});
+      assert.doesNotMatch(await render(wrap(hidden)), /<svg|<img/);
+      hidden.rules.push({...match,actions:[{target:'icon',icon:'foxoe'}]});
+      assert.match(await render(wrap(hidden)), /<img class="icon" src="(?:\/foxoe.svg|data:image\/svg\+xml,)/);
+    }
+    assert.deepEqual(base,original);
+    const editor=await renderToString(createSSRApp(Editor,{rule:base.rules[0],kind:'icon'}));
+    assert.match(editor,/value="icon"/);assert.match(editor,/Search icons/);assert.match(editor,/No icon/);
+    const textEditor=await renderToString(createSSRApp(Editor,{rule:match,kind:'text'}));
+    assert.doesNotMatch(textEditor,/value="icon"/);
+  }finally{await server.close();}
+});

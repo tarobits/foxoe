@@ -14,6 +14,7 @@ const selected = ref(''), tab = ref<'content' | 'appearance' | 'rules'>('content
 const item = computed(() => props.widget.items.find(item => item.id === selected.value));
 const target = computed(() => item.value || props.widget);
 const requiresTextContent = computed(() => target.value.rules.some(rule => rule.actions?.some(action => action.target === 'text')));
+const requiresIconContent = computed(() => target.value.rules.some(rule => rule.actions?.some(action => action.target === 'icon')));
 function addItem() {
   if (props.widget.items.length >= 24) return;
   const item: WidgetItem = { id: `item-${crypto.randomUUID().slice(0, 8)}`, kind: 'text', title: '', text: '', source: 'system', path: '', itemPath: '', unit: '', icon: 'window', row: 0, column: 0, rowSpan: 1, columnSpan: 1, rules: [], align: 'left' };
@@ -43,7 +44,7 @@ watch(() => props.widget.kind, () => { selected.value = ''; });
     <nav class="editor-tabs" :aria-label="t('widgetOptions')"><button v-for="section in (['content', 'appearance', 'rules'] as const)" :key="section" type="button" :class="{ selected: tab === section }" :aria-pressed="tab === section" @click="tab = section">{{ t(section) }}</button></nav>
     <Transition name="notice" mode="out-in">
       <div v-if="tab === 'content'" key="content" class="form-stack">
-        <div class="form-row"><label class="grow">{{ t('title') }}<input v-model="target.title" maxlength="60"></label><label>{{ t('kind') }}<select v-model="target.kind"><option v-for="kind in ['clock','value','list','text','icon', ...(!item ? ['layout'] : [])]" :key="kind" :value="kind" :disabled="requiresTextContent && !['text', 'value'].includes(kind)">{{ t(kind) }}</option></select></label></div>
+        <div class="form-row"><label class="grow">{{ t('title') }}<input v-model="target.title" maxlength="60"></label><label>{{ t('kind') }}<select v-model="target.kind"><option v-for="kind in ['clock','value','list','text','icon', ...(!item ? ['layout'] : [])]" :key="kind" :value="kind" :disabled="(requiresTextContent && !['text', 'value'].includes(kind)) || (requiresIconContent && kind !== 'icon')">{{ t(kind) }}</option></select></label></div>
         <label class="checkbox-row title-toggle"><input type="checkbox" :checked="target.showTitle !== false" @change="target.showTitle = ($event.target as HTMLInputElement).checked">{{ t('showTitle') }}</label>
         <template v-if="target.kind === 'layout'">
           <label class="checkbox-row"><input v-model="widget.allowOverlap" type="checkbox">{{ t('allowItemOverlap') }}</label>

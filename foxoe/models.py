@@ -189,7 +189,12 @@ class TitleAction(StrictModel):
     text: str = Field(max_length=60, strict=True)
 
 
-RuleAction = Annotated[ColorAction | VisibilityAction | TextAction | TitleAction, Field(discriminator='target')]
+class IconAction(StrictModel):
+    target: Literal['icon']
+    icon: Icon | None
+
+
+RuleAction = Annotated[ColorAction | VisibilityAction | TextAction | TitleAction | IconAction, Field(discriminator='target')]
 
 
 class WidgetRule(ComparisonFields):
@@ -249,9 +254,11 @@ class WidgetContent(WidgetAppearance):
     icon: Icon | None = 'window'
 
     @model_validator(mode='after')
-    def valid_text_actions(self):
+    def valid_content_actions(self):
         if self.kind not in ('text', 'value') and any(action.target == 'text' for rule in self.rules for action in rule.actions or []):
             raise ValueError('text_action_requires_text_or_value')
+        if self.kind != 'icon' and any(action.target == 'icon' for rule in self.rules for action in rule.actions or []):
+            raise ValueError('icon_action_requires_icon')
         return self
 
 

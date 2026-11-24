@@ -5,7 +5,7 @@ export interface Application extends KeyColors { id: string; name: string; url: 
 export interface Source { id: string; name: string; url: string; interval: number; authEnv: string }
 export interface ComparisonFields { source: string; path: string; operator: 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains' | 'exists' | 'missing' | 'truthy' | 'falsy'; value: string | number | boolean | null }
 export type Condition = (ComparisonFields & { kind: 'comparison'; negate?: boolean }) | { kind: 'and' | 'or'; negate?: boolean; children: Condition[] };
-export type RuleAction = { target: 'textColor' | 'backgroundColor' | 'iconColor'; color: string | null } | { target: 'visible'; visible: boolean } | { target: 'text' | 'title'; text: string };
+export type RuleAction = { target: 'textColor' | 'backgroundColor' | 'iconColor'; color: string | null } | { target: 'visible'; visible: boolean } | { target: 'text' | 'title'; text: string } | { target: 'icon'; icon: IconName | null };
 export interface WidgetRule extends ComparisonFields { condition?: Condition | null; actions?: RuleAction[] | null; target: 'textColor' | 'backgroundColor' | 'iconColor' | 'visible'; color: string | null; visible: boolean }
 export interface WidgetAppearance { textColor?: string | null; backgroundColor?: string | null; iconColor?: string | null; fontSize?: number | null; align?: 'left' | 'center' | 'right'; rules: WidgetRule[] }
 export interface WidgetElement extends WidgetAppearance { id: string; kind: 'clock' | 'text' | 'value' | 'list' | 'icon' | 'layout'; title: string; showTitle?: boolean; text: string; source: string; path: string; itemPath: string; unit: string; icon?: IconName | null }

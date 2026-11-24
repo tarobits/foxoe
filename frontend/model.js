@@ -83,13 +83,14 @@ export function ruleMatches(rule, data) {
 }
 
 export function appearance(item, data) {
-  /** @type {{ textColor?: string | null, backgroundColor?: string | null, iconColor?: string | null, visible: boolean, text?: string, title?: string }} */
+  /** @type {{ textColor?: string | null, backgroundColor?: string | null, iconColor?: string | null, visible: boolean, text?: string, title?: string, icon?: import('./icons').IconName | null }} */
   const result = { textColor: item.textColor, backgroundColor: item.backgroundColor, iconColor: item.iconColor, visible: true };
   for (const rule of item.rules || []) if (ruleMatches(rule, data)) {
     for (const action of rule.actions ?? [rule]) {
       if (action.target === 'visible') result.visible = action.visible;
       else if (['textColor', 'backgroundColor', 'iconColor'].includes(action.target)) result[action.target] = action.color;
       else if (['text', 'title'].includes(action.target) && typeof action.text === 'string') result[action.target] = action.text;
+      else if (action.target === 'icon') result.icon = action.icon;
     }
   }
   return result;
