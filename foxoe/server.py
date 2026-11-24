@@ -34,7 +34,6 @@ ORIGIN = "http://127.0.0.1:8765"
 def create_app(directory: Path | None = None, hardware: bool = True):
     store = Store(directory or ROOT / "data")
     controller = Controller(store.load(), ORIGIN)
-    controller.set_device_enabled(store.deck_enabled())
     sources = Sources(controller)
 
     @asynccontextmanager
@@ -123,10 +122,6 @@ def create_app(directory: Path | None = None, hardware: bool = True):
 
     @app.put('/api/deck/power')
     async def set_deck_power(value: DeckPower):
-        try:
-            store.set_deck_enabled(value.enabled)
-        except sqlite3.Error:
-            return JSONResponse({'error': 'saveFailed'}, status_code=503)
         controller.set_device_enabled(value.enabled)
         return await deck_power()
 

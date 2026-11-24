@@ -1,5 +1,4 @@
 import json
-import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 
 import httpx
@@ -16,7 +15,7 @@ from foxoe.store import Store
 ORIGIN='http://127.0.0.1:8765'
 
 
-def test_power_persists_rejects_bad_requests_and_recovers_after_write_failure(tmp_path):
+def test_power_is_temporary_rejects_bad_requests_and_recovers(tmp_path):
     app=create_app(tmp_path,hardware=False)
     with TestClient(app,base_url=ORIGIN) as client:
         assert client.get('/api/deck/power').json()['enabled'] is True
@@ -28,17 +27,22 @@ def test_power_persists_rejects_bad_requests_and_recovers_after_write_failure(tm
         assert app.state.controller.device_enabled is True
         assert client.put('/api/deck/power',json={'enabled':False},headers={'origin':ORIGIN}).json()['brightness']==0
         assert client.get('/api/config').json()==before
-        assert Store(tmp_path).deck_enabled() is False
-        assert create_app(tmp_path,hardware=False).state.controller.device_enabled is False
-        with app.state.store.connect() as db:
-            db.execute("CREATE TRIGGER block_power BEFORE UPDATE ON device_state BEGIN SELECT RAISE(ABORT, 'synthetic failure'); END")
-        assert client.put('/api/deck/power',json={'enabled':True},headers={'origin':ORIGIN}).status_code==503
+        assert create_app(tmp_path,hardware=False).state.controller.device_enabled is True
+        assert client.put('/api/deck/power',json={'enabled':'true'},headers={'origin':ORIGIN}).status_code==422
+        assert client.put('/api/deck/power',json={'enabled':True},headers={'origin':'https://evil.test'}).status_code==403
         assert app.state.controller.device_enabled is False
-        assert Store(tmp_path).deck_enabled() is False
-        with app.state.store.connect() as db:
-            db.execute('DROP TRIGGER block_power')
         assert client.put('/api/deck/power',json={'enabled':True},headers={'origin':ORIGIN}).json()['brightness']==before['brightness']
-        assert Store(tmp_path).deck_enabled() is True
+
+
+def test_restart_ignores_previously_saved_off_state(tmp_path):
+    store=Store(tmp_path)
+    with store.connect() as db:
+        db.execute('CREATE TABLE IF NOT EXISTS device_state (id INTEGER PRIMARY KEY, enabled INTEGER NOT NULL)')
+        db.execute('INSERT OR REPLACE INTO device_state VALUES (1, 0)')
+    with TestClient(create_app(tmp_path,hardware=False),base_url=ORIGIN) as client:
+        status=client.get('/api/deck/power').json()
+        assert status['enabled'] is True
+        assert status['brightness']==store.load().brightness
 
 
 def test_power_disables_presses_preserves_layout_and_rejects_old_generations():
@@ -62,15 +66,24 @@ def test_power_disables_presses_preserves_layout_and_rejects_old_generations():
     assert queue.get_nowait()['type']=='launch'
 
 
-def test_concurrent_power_writes_and_invalid_write_do_not_lock_store(tmp_path):
-    store=Store(tmp_path)
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        list(pool.map(store.set_deck_enabled,[True,False]*8))
-    with pytest.raises(ValueError): store.set_deck_enabled('false')
-    store.set_deck_enabled(False)
-    assert store.deck_enabled() is False
-    config=store.load(); store.save(config)
-    assert store.deck_enabled() is False
+def test_concurrent_power_commands_never_access_database(tmp_path,monkeypatch):
+    app=create_app(tmp_path,hardware=False)
+    with TestClient(app,base_url=ORIGIN) as client:
+        def unexpected_database_access():
+            raise AssertionError('Power commands must not access persistent storage')
+        with monkeypatch.context() as patch:
+            patch.setattr(app.state.store,'connect',unexpected_database_access)
+            def command(enabled):
+                response=client.put('/api/deck/power',json={'enabled':enabled},headers={'origin':ORIGIN})
+                assert response.status_code==200
+                assert response.json()['enabled'] is enabled
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                list(pool.map(command,[True,False]*8))
+            command(False)
+            assert client.get('/api/deck/power').json()['enabled'] is False
+        config=app.state.store.load(); app.state.store.save(config)
+        assert app.state.controller.device_enabled is False
+    assert create_app(tmp_path,hardware=False).state.controller.device_enabled is True
 
 
 def test_cli_routes_through_service_with_safe_transport(monkeypatch,capsys):
