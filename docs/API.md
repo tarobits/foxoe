@@ -268,6 +268,12 @@ wins across actions and rules. Base content is never changed and returns as soon
 as no matching action overrides it. Unavailable condition sources disable the
 entire rule. Multiple actions also work with nested `condition` groups below.
 
+Icon widgets and items also accept `{"target": "icon", "icon": "user"}` to
+replace the displayed icon. Use any supported icon name, including `foxoe`, or
+null to show no icon. The original icon returns when the condition no longer
+matches. Icon actions can be combined with color, title, and visibility actions;
+they are rejected on other content kinds.
+
 For combined logic, supply `condition` on the rule. It replaces the rule's
 top-level comparison fields; omitting it (or setting it to null) retains the
 single-comparison behavior. A comparison node has `kind: "comparison"` and the
@@ -309,9 +315,11 @@ status in `device`, and effective brightness in `brightness`. `PUT` accepts
 only through the loopback service, not the network administration or app
 registration gateways. The `foxoe deck on|off|status` CLI uses this endpoint.
 
-Off persists in the database, sets brightness to zero, and suppresses key events.
-On restores configured brightness and the current layout. Configuration changes
-do not turn the device back on. USB updates are applied asynchronously; an
-accepted command is retained if the device is disconnected. Failed persistence
-returns 503 without changing the controller state. Invalid bodies return 422.
+Off sets brightness to zero and suppresses key events for the current service
+session. Power state is held only in memory; every service restart or reboot
+starts with the Stream Deck on, including installations with an older saved off
+state. On restores configured brightness and the current layout. Configuration
+changes do not turn the device back on. USB updates are applied asynchronously;
+an accepted command is retained if the device is disconnected and applied when
+it reconnects during the same service session. Invalid bodies return 422.
 `GET /api/state` also includes `deviceEnabled`.

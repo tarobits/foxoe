@@ -99,8 +99,9 @@ Control the Stream Deck through the running service, without sudo:
 ```
 
 `off` sets brightness to zero and ignores key presses until `on` restores the
-configured brightness. The setting persists across service restarts and USB
-reconnections. Status reports the requested on/off state and device connection;
+configured brightness. The setting is temporary: FoxOE starts with the Stream
+Deck on after every service restart or reboot. USB reconnections during the same
+service session retain the current setting. Status reports the requested on/off state and device connection;
 disconnected devices receive the setting when they reconnect. The service must
 be running. With FoxOE's Python environment activated, use `foxoe deck off`
 (or `on` / `status`) directly.
@@ -164,7 +165,8 @@ overlap. Icons shrink to fit their cells when rows or columns become smaller.
 padding, and item spacing. Leave a title blank or disable **Show title** to display
 only the content, including for individual items. **Rules** compare live data fields
 with typed values. Each rule can apply multiple actions to change colors,
-visibility, titles, and displayed text or values. Use **Add action** to combine
+visibility, titles, displayed text or values, and icons on icon widgets or items
+(including **No icon**). Use **Add action** to combine
 changes under one condition. Replacement text temporarily replaces a text item's
 content or a value (including its unit); the original returns when the rule no
 longer matches. Title actions still respect **Show title**. Use

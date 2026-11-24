@@ -54,7 +54,7 @@ The managed installation defaults to `~/.local/share/foxoe`:
 | `current` | Symlink to the active release |
 | `extension/` | Stable unpacked extension directory, updated and restored with the service |
 | `releases/` | Separate source, Python environment, and frontend build per deployment |
-| `data/` | Persistent dashboard configuration, Stream Deck power state, images, and credentials |
+| `data/` | Persistent dashboard configuration, images, and credentials |
 | `installation.json` | Repository, installed version/commit, and update channel |
 | `backups/` | Data snapshots made while the service is stopped |
 | `logs/service.log` | Service output retained across failed fresh installations |
