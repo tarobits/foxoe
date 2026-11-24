@@ -7,6 +7,20 @@ GitHub release tags use the `v` prefix, for example `v1.0.0`.
 
 ## [Unreleased]
 
+## [0.1.0-preview.11] - 2026-11-24
+
+### Added
+
+- Conditional icon replacements for icon widgets and layout items, using the full icon library or No icon. Combine them with other actions; the original icon returns when the condition stops matching.
+
+### Changed
+
+- Stream Deck on/off commands now apply only to the current service session. FoxOE starts with the Stream Deck on after every service restart or reboot, ignoring previously saved off states. USB reconnections retain the current session's setting.
+
+**Downgrade compatibility:** After saving icon actions, restoring an earlier
+release also requires restoring the pre-update database; earlier releases do
+not recognize icon actions.
+
 ## [0.1.0-preview.10] - 2026-11-23
 
 ### Added
@@ -174,7 +188,8 @@ extension session have not yet been validated on the target setup.
 - English and German interfaces.
 - Raspberry Pi OS/Debian installation and updates from published GitHub releases, with remembered stable/beta channels, data preservation, and recovery after a failed activation.
 
-[Unreleased]: https://github.com/tarobits/foxoe/compare/v0.1.0-preview.10...main
+[Unreleased]: https://github.com/tarobits/foxoe/compare/v0.1.0-preview.11...main
+[0.1.0-preview.11]: https://github.com/tarobits/foxoe/compare/v0.1.0-preview.10...v0.1.0-preview.11
 [0.1.0-preview.10]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre9...v0.1.0-preview.10
 [0.1.0-pre9]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre8...v0.1.0-pre9
 [0.1.0-pre8]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre7...v0.1.0-pre8
