@@ -23,9 +23,10 @@ export function firstSpace(widget, widgets) {
   return null;
 }
 
-export function formatValue(value, locale) {
+/** @param {number | null} [decimals] */
+export function formatValue(value, locale, decimals = null) {
   if (typeof value === 'boolean') return String(value);
-  if (typeof value === 'number' && Number.isFinite(value)) return new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(value);
+  if (typeof value === 'number' && Number.isFinite(value)) return new Intl.NumberFormat(locale, decimals == null ? { maximumFractionDigits: 2 } : { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(value);
   if (typeof value === 'string') return value;
   return null;
 }
@@ -100,7 +101,10 @@ export function contentStyle(item, data) {
   const colors = appearance(item, data);
   return { color: colors.textColor || undefined, backgroundColor: colors.backgroundColor || undefined,
     '--widget-text-color': colors.textColor || undefined, '--widget-icon-color': colors.iconColor || undefined,
-    '--widget-font-size': item.fontSize ? `${item.fontSize}px` : undefined, textAlign: item.align || 'left',
+    '--widget-font-size': item.fontSize ? `${item.fontSize}px` : undefined,
+    '--widget-font-weight': item.fontWeight ?? undefined, '--widget-font-style': item.italic ? 'italic' : 'normal',
+    '--widget-vertical-align': item.verticalAlign === 'top' ? 'flex-start' : item.verticalAlign === 'bottom' ? 'flex-end' : item.verticalAlign === 'middle' ? 'center' : undefined,
+    textAlign: item.align || 'left',
     '--widget-justify': item.align === 'center' ? 'center' : item.align === 'right' ? 'flex-end' : 'flex-start',
     '--widget-icon-margin': item.align === 'center' ? 'auto' : item.align === 'right' ? 'auto 0' : '0 auto' };
 }

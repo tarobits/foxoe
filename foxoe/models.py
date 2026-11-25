@@ -5,6 +5,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from .formula import validate_formula
 
 ICON_NAMES = frozenset(json.loads(Path(__file__).with_name('icon_catalog.json').read_text())) | {'foxoe'}
 Icon = Literal[tuple(sorted(ICON_NAMES))]
@@ -237,6 +238,9 @@ class WidgetAppearance(StrictModel):
     backgroundColor: Color | None = None
     iconColor: Color | None = None
     fontSize: int | None = Field(default=None, ge=8, le=96, strict=True)
+    fontWeight: Literal[300, 400, 500, 600, 700, 800, 900] | None = None
+    italic: bool = Field(default=False, strict=True)
+    verticalAlign: Literal['top', 'middle', 'bottom'] | None = None
     align: Literal['left', 'center', 'right'] = 'left'
     rules: list[WidgetRule] = Field(default_factory=list, max_length=16)
 
@@ -252,6 +256,14 @@ class WidgetContent(WidgetAppearance):
     itemPath: str = Field(default="", max_length=200)
     unit: str = Field(default="", max_length=12)
     icon: Icon | None = 'window'
+
+    formula: str = Field(default='', max_length=512, strict=True)
+    decimals: int | None = Field(default=None, ge=0, le=10, strict=True)
+
+    @field_validator('formula')
+    @classmethod
+    def valid_formula(cls, value):
+        return validate_formula(value)
 
     @model_validator(mode='after')
     def valid_content_actions(self):

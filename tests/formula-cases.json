@@ -1,0 +1,4 @@
+{
+  "valid": ["value / 1000", "(field(\"total\") - field(\"used\")) / 1000", "max(0, min(value, 100))", "round(value, 2)", "abs(-4) + ceil(.2) - floor(0.9)", "1e3 + 02", "field(\"items[0].mm\")", "-value * (2 + 3)", "5 % 2", "field(\"$.nested.value\")", "1 / 0"],
+  "invalid": ["value.constructor", "__import__(\"os\")", "fetch(\"https://evil.test\")", "field(\"__proto__.x\")", "field(\"constructor\")", "field(\"items[*]\")", "field(\"a\", \"b\")", "field(\"a\" \"b\")", "field(value)", "value = 1", "1;2", "2 ** 3", "2 // 3", "1 +", "min()", "abs(1,2)", "round(1,2,3)", "value[0]", "value ? 1 : 2", "Infinity", "NaN", "true", "1e999", "\"4\"", "min(1,2,3,4,5,6,7,8,9)"]
+}
