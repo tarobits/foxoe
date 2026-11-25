@@ -154,14 +154,17 @@ persistent only when saved; Cancel discards the draft. The grid has 24 columns,
 48 rows at 48px each, and rejects overlaps. Existing layouts migrate to the finer
 grid automatically. The whole widget area, including its contents, scales down
 to fit above the app dock without scrolling. Narrow screens retain the grid
-layout; position and size remain editable through fields.
+layout; position and size remain editable through fields. Editing on a larger
+screen uses the same 1024×600 kiosk design area. Widget previews use the actual
+grid dimensions and padding, so they preserve the dashboard's text wrapping.
 
 Choose **Custom layout** to combine text, values, lists, clocks, and icons in one
 widget. Adjust row/column proportions and each item's position and spans.
 Enable **Allow overlaps** in the widget's Content tab to share cells between
 items; later items appear above earlier ones. Dashboard widgets still cannot
 overlap. Icons shrink to fit their cells when rows or columns become smaller.
-**Appearance** controls text, icon, and background colors, text size, alignment,
+**Appearance** controls text, icon, and background colors, text size, weight,
+italic, horizontal and vertical alignment,
 padding, and item spacing. Leave a title blank or disable **Show title** to display
 only the content, including for individual items. **Rules** compare live data fields
 with typed values. Each rule can apply multiple actions to change colors,
@@ -177,7 +180,30 @@ rules apply in order; the last matching change to a property wins. Failed or
 unavailable sources do not trigger rules. Hidden widgets keep their grid space
 and remain visible while editing.
 
-Add JSON endpoints under Settings → Data sources. Widget paths support ordinary
+Automatic text sizing measures the space available to each widget or item,
+wrapping and shrinking to fit. A specified text size is an upper limit; automatic
+text can grow up to 96px. Top, middle, and bottom alignment control the remaining
+space around the content. Numeric values and list entries support 0–10 fixed
+decimal places, or automatic formatting.
+
+Value widgets and items accept arithmetic formulas. Use `value` for the selected
+path, or `field("path")` for another numeric field from the same source:
+
+```text
+value / 1000
+(field("totalLength") - field("usedLength")) / 1000
+round(value, 2)
+```
+
+Formulas support `+`, `-`, `*`, `/`, `%`, parentheses, `min`, `max`, `abs`,
+`round`, `floor`, and `ceil`. They change only the displayed result; conditions
+still compare original source data. Missing/non-numeric fields, division by zero,
+and non-finite results show an error and recover when valid data returns.
+
+Add JSON endpoints under Settings → Data sources. Field pickers in item content
+and conditions show system field names with their exact paths, or discovered
+paths from the latest JSON response. Manual paths remain available.
+Widget paths support ordinary
 properties and numeric array indices, such as `queue.items` or `jobs[0].name`.
 They do not execute JavaScript or JSONPath expressions. For list widgets, the
 item path selects a scalar field from each item. Up to 100 entries are displayed,

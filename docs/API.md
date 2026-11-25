@@ -216,6 +216,9 @@ configuration format without restoring their corresponding backup.
 
 Widgets support `textColor`, `iconColor`, `backgroundColor` (`#RRGGBB` or `null`),
 `fontSize` (8–96px or `null` for automatic), `align` (`left`, `center`, `right`),
+`fontWeight` (300–900 in steps of 100, or `null` for the content default),
+`italic` (boolean, default `false`), `verticalAlign` (`top`, `middle`, `bottom`,
+or `null` for the content default),
 `padding` (0–48px), and `rules`. A `kind: "layout"` widget additionally has
 `rows`/`columns` (1–6 integer weights, each 1–12), `gap` (0–32px), and up to 24
 `items`. Each item has its own content, styles, and rules, plus zero-based
@@ -224,6 +227,28 @@ sets `allowOverlap: true` (default `false`). Bounds and unique IDs remain requir
 later items render above earlier items. This does not allow dashboard widgets to
 overlap. Supported item
 kinds are `text`, `value`, `list`, `clock`, and `icon`; nested layouts are rejected.
+
+The dashboard uses a fixed 1024×600 design target with a 968px-wide widget grid
+and 372px available height. Larger grids scale down, including their contents.
+Text sizes are fitted to actual cell bounds; `fontSize` sets an upper limit, and
+automatic text is capped at 96px. Preview and dashboard use identical grid
+dimensions and content rendering.
+
+Value widgets/items support `formula` (up to 512 characters, default `""`).
+`value` refers to the selected `path`; `field("other.path")` reads another numeric
+field from the same source. Supported syntax is numeric literals, parentheses,
+unary `+`/`-`, arithmetic `+ - * / %`, and `min`, `max`, `abs`, `round`, `floor`,
+`ceil`. `round(number, places)` accepts 0–10 decimal places (default 0); ties round
+toward positive infinity. `min`/`max` accept 1–8 arguments. Formula structure is
+limited to 128 tokens and depth 16. No scripting, property access, assignment, or
+network access is available. Invalid syntax is rejected with 422 before saving.
+Missing, non-numeric, or non-finite operands and division by zero produce display
+errors without modifying the JSON data or conditional comparisons.
+
+`decimals` (integer 0–10 or `null`) controls fixed decimal places for numeric
+values and list entries, using the dashboard locale. `null` retains automatic
+formatting with up to two fractional digits. A conditional text replacement
+overrides the displayed formula result and unit.
 
 Each rule compares `source` and `path` using an `operator`, with a typed scalar
 `value`. Existing single-action rules change one `target` (`textColor`,
