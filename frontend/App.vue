@@ -10,6 +10,7 @@ import Demo from './Demo.vue';
 import { t, locale } from './i18n';
 import { firstSpace, fits, itemFits, appearance, contentStyle, usesSource } from './model.js';
 import { useDashboardViewport, dashboardDragDelta } from './dashboardViewport';
+import { parseFormula } from './formula.js';
 import type { Config, Widget, Source, DeckState, DataEntry } from './types';
 
 defineProps<{ remote?: boolean }>();
@@ -144,6 +145,8 @@ function closeWidget() {
 }
 function applyWidget() {
   if (!selected.value || !draft.value) return;
+  try { for (const item of [selected.value, ...selected.value.items]) if (item.formula?.trim()) parseFormula(item.formula.trim()); }
+  catch { widgetError.value = t('invalidFormula'); return; }
   if (!fits(selected.value, draft.value.widgets)) { widgetError.value = t('overlap'); return; }
   if (selected.value.items.some(item => !itemFits(item, selected.value))) { widgetError.value = t(selected.value.allowOverlap ? 'itemBounds' : 'itemOverlap'); return; }
   const index = draft.value.widgets.findIndex(widget => widget.id === selected.value!.id);
@@ -214,7 +217,7 @@ onUnmounted(() => { abort.abort(); clearTimeout(pollTimer); clearInterval(clockT
         <div v-else ref="viewport" class="widget-viewport">
         <div ref="grid" class="widget-grid" :style="{ width: `${canvas.width}px`, height: `${canvas.height}px`, transform: `translateX(-50%) scale(${canvas.scale})`, gridTemplateRows: `repeat(${rows}, 48px)` }">
           <TransitionGroup name="surface">
-          <article v-for="widget in active?.widgets" v-show="editing || appearance(widget, data).visible" :key="widget.id" class="widget-panel" :class="{ moving: preview?.id === widget.id, invalid: preview?.id === widget.id && !fits(preview, active!.widgets), 'rule-hidden': editing && !appearance(widget, data).visible }" :style="{ ...placement(widget), ...contentStyle(widget, data), padding: `${widget.padding}px`, paddingTop: editing ? `${Math.max(56, widget.padding)}px` : undefined }">
+          <article v-for="widget in active?.widgets" v-show="editing || appearance(widget, data).visible" :key="widget.id" class="widget-panel" :class="{ moving: preview?.id === widget.id, invalid: preview?.id === widget.id && !fits(preview, active!.widgets), 'rule-hidden': editing && !appearance(widget, data).visible }" :style="{ ...placement(widget), ...contentStyle(widget, data), padding: `${widget.padding}px` }">
             <Transition name="notice"><div v-if="editing" class="widget-tools"><button class="icon-button drag-handle" :aria-label="t('moveWidget')" @pointerdown="startDrag($event, widget)" @keydown="keyMove($event, widget)"><Icon name="move" /></button><button class="icon-button" :aria-label="t('editWidget')" @click="editWidget(widget)"><Icon name="edit" /></button></div></Transition>
             <WidgetContent :widget="widget" :data="data" :now="now" :editing="editing" />
             <Transition name="notice"><button v-if="editing" class="icon-button resize-handle" :aria-label="t('resizeWidget')" @pointerdown="startDrag($event, widget, true)" @keydown="keyMove($event, widget, true)"><Icon name="resize" /></button></Transition>

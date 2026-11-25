@@ -58,7 +58,7 @@ h2 { font-size: 17px; font-weight: 650; letter-spacing: -.25px; line-height: 1.4
 .danger-text { color: var(--danger-text); }
 .muted { color: var(--muted); }
 .success { color: var(--success-text); }
-.shell { height: 100dvh; min-height: 400px; display: flex; flex-direction: column; overflow: hidden; }
+.shell { height: 100dvh; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .shell-header { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 88px; padding: 20px 28px; }
 .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .brand-mark { width: 36px; height: 36px; flex: 0 0 auto; }
@@ -70,18 +70,21 @@ h2 { font-size: 17px; font-weight: 650; letter-spacing: -.25px; line-height: 1.4
 .dashboard .widget-content, .dashboard .widget-cell { overflow: clip; }
 .dashboard .edit-toolbar { flex-shrink: 0; }
 .widget-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; min-width: 0; min-height: 0; padding: 24px; position: relative; overflow: hidden; }
-.widget-content { height: 100%; display: flex; flex-direction: column; min-height: 0; overflow: auto; }
-.widget-content h2 { margin-bottom: 12px; color: var(--widget-text-color, var(--text-secondary)); }
-.widget-clock { justify-content: center; }
-.clock-time { font-size: var(--widget-font-size, clamp(36px, 5.4vw, 64px)); letter-spacing: -.035em; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.2; }
-.clock-date { color: var(--widget-text-color, var(--text-secondary)); margin-top: 12px; overflow-wrap: anywhere; }
-.metric { display: flex; align-items: baseline; justify-content: var(--widget-justify, flex-start); flex-wrap: wrap; gap: 8px; margin-top: auto; margin-bottom: auto; font-size: var(--widget-font-size, clamp(28px, 4vw, 48px)); line-height: 1.15; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.03em; overflow-wrap: anywhere; }
-.metric small { font-size: 20px; color: var(--widget-text-color, var(--muted)); }
-.text-content { white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--widget-font-size, 16px); }
-.queue-list { list-style: none; margin: 0; padding: 0; font-size: var(--widget-font-size, 16px); }
-.queue-list li { padding: 10px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.widget-content { height: 100%; display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: clip; justify-content: var(--widget-vertical-align, flex-start); }
+.widget-value-content { flex: 0 0 auto; min-width: 0; width: 100%; font-size: var(--fit-font-size, var(--widget-font-size, 16px)); font-weight: var(--widget-font-weight, 400); font-style: var(--widget-font-style, normal); line-height: 1.4; }
+.widget-content h2 { font-size: min(17px, .85em); margin-bottom: .5em; color: var(--widget-text-color, var(--text-secondary)); font-weight: var(--widget-font-weight, 650); }
+.widget-clock, .widget-value { justify-content: var(--widget-vertical-align, center); }
+.widget-icon > .widget-value-content { height: 100%; display: flex; flex-direction: column; }
+.clock-time { display: block; font-size: 1em; letter-spacing: -.035em; font-weight: var(--widget-font-weight, 600); font-variant-numeric: tabular-nums; line-height: 1.2; overflow-wrap: anywhere; }
+.clock-date { color: var(--widget-text-color, var(--text-secondary)); margin-top: .5em; font-size: .4em; overflow-wrap: anywhere; }
+.metric { display: flex; align-items: baseline; justify-content: var(--widget-justify, flex-start); flex-wrap: wrap; gap: .25em; font-size: 1em; line-height: 1.15; font-weight: var(--widget-font-weight, 600); font-variant-numeric: tabular-nums; letter-spacing: -.03em; overflow-wrap: anywhere; }
+.metric > span { min-width: 0; max-width: 100%; }
+.metric small { font-size: .65em; color: var(--widget-text-color, var(--muted)); }
+.text-content { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 1em; }
+.queue-list { list-style: none; margin: 0; padding: 0; font-size: 1em; }
+.queue-list li { padding: .35em 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .queue-list li:last-child { border-bottom: 0; }
-.data-warning { color: var(--danger-text); font-size: 14px; margin-bottom: 8px; }
+.data-warning { color: var(--danger-text); font-size: min(14px, 1em); margin-bottom: .5em; }
 .data-warning span { display: block; }
 .app-dock { flex-shrink: 0; display: flex; align-items: center; gap: 24px; padding: 16px 28px; background: var(--surface-deepest); border-top: 1px solid var(--line); min-height: 104px; }
 .dock-apps { display: flex; align-items: stretch; gap: 12px; overflow-x: auto; min-width: 0; padding: 4px; flex: 1; }
@@ -97,8 +100,9 @@ h2 { font-size: 17px; font-weight: 650; letter-spacing: -.25px; line-height: 1.4
 .dock-status { display: flex; flex-direction: column; gap: 2px; font-size: 14px; color: var(--muted); flex-shrink: 0; max-width: 200px; }
 .dock-status > span:first-child { color: var(--text-secondary); }
 .edit-toolbar { display: flex; justify-content: space-between; gap: 16px; align-items: center; padding: 0 4px 16px; }
-.editing .widget-panel { border-color: var(--border-strong); padding-top: 60px; }
-.widget-tools { position: absolute; top: 4px; left: 4px; right: 4px; display: flex; justify-content: space-between; }
+.editing .widget-panel { border-color: var(--border-strong); }
+.widget-tools { position: absolute; top: 4px; left: 4px; right: 4px; display: flex; justify-content: space-between; z-index: 2; pointer-events: none; }
+.widget-tools button { pointer-events: auto; }
 .widget-tools .icon-button, .resize-handle { min-width: 44px; min-height: 44px; }
 .drag-handle, .resize-handle { touch-action: none; cursor: grab; }
 .resize-handle { position: absolute; right: 2px; bottom: 2px; cursor: nwse-resize; background: var(--surface); }
@@ -163,7 +167,7 @@ textarea { resize: vertical; }
 .widget-dialog form { display: flex; flex-direction: column; max-height: calc(100dvh - 34px); }
 .widget-body { height: 100%; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
 .widget-layout { display: grid; flex: 1; min-height: 0; }
-.widget-cell { min-width: 0; min-height: 0; overflow: auto; isolation: isolate; }
+.widget-cell { min-width: 0; min-height: 0; overflow: clip; isolation: isolate; }
 .widget-icon-frame { position: relative; flex: 1 1 0; min-width: 0; min-height: 0; }
 .widget-icon-frame .icon { position: absolute; inset: 0; margin-block: auto; margin-inline: var(--widget-icon-margin, 0 auto); width: var(--widget-font-size, 40px); height: var(--widget-font-size, 40px); max-width: 100%; max-height: 100%; object-fit: contain; color: var(--widget-icon-color, currentColor); }
 .layout-heading { margin-bottom: 12px; color: var(--widget-text-color, var(--text-secondary)); }
@@ -191,7 +195,9 @@ textarea { resize: vertical; }
 .condition-children > .condition-editor + .condition-editor { border-top: 1px solid var(--line); padding-top: 16px; }
 .condition-editor .form-row { flex-wrap: wrap; }
 .condition-editor .form-row > label { min-width: 0; flex: 1 1 120px; }
-.widget-preview-panel { height: 180px; margin-top: 12px; background: var(--surface); border-radius: 6px; overflow: auto; }
+.widget-preview-viewport { position: relative; width: 100%; margin-top: 12px; overflow: clip; }
+.widget-preview-panel { position: absolute; left: 0; top: 0; transform-origin: top left; }
+.field-picker { flex: 1 1 220px; min-width: 0; }
 .dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
 .dialog-body { overflow: auto; padding: 20px 24px; }
 .form-stack { display: flex; flex-direction: column; gap: 20px; }
@@ -229,8 +235,6 @@ legend { margin-bottom: 12px; font-size: 14px; font-weight: 600; }
   .brand > .icon { display: none; }
   h1 { font-size: 27px; }
   .dashboard, .settings-view { padding: 8px 16px 20px; }
-  .clock-time { font-size: var(--widget-font-size, 48px); }
-  .metric { font-size: var(--widget-font-size, 40px); }
   .app-dock { padding: 12px; gap: 0; min-height: 96px; }
   .dock-status { display: none; }
   .dock-app { max-width: 220px; }

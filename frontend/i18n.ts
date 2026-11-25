@@ -3,6 +3,10 @@ import { ref } from 'vue';
 export const locale = ref<'en' | 'de'>('en');
 export const messages: Record<'en' | 'de', Record<string, string>> = {
   en: {
+    formula: 'Formula', formulaPlaceholder: 'value / 1000', formulaHelp: 'Use value for the selected field or field("path") for another field in this source. Supports + − * / %, parentheses, min, max, abs, round, floor, and ceil.',
+    invalidFormula: 'Invalid formula.', formulaDataUnavailable: 'Formula needs numeric data.', formulaDivisionByZero: 'Cannot divide by zero.', formulaNonFinite: 'Formula result is too large.', formulaDecimals: 'Rounding needs 0–10 decimal places.',
+    availableFields: 'Available fields', chooseField: 'Choose a field', decimalPlaces: 'Decimal places', fontWeight: 'Weight', italic: 'Italic', verticalAlignment: 'Vertical alignment', top: 'Top', middle: 'Middle', bottom: 'Bottom',
+    weight300: 'Light', weight400: 'Regular', weight500: 'Medium', weight600: 'Semibold', weight700: 'Bold', weight800: 'Extra bold', weight900: 'Black',
     ruleActions: 'Actions', addRuleAction: 'Add action', removeRuleAction: 'Remove action', replacementText: 'Replacement text',
     allowItemOverlap: 'Allow overlaps', itemBounds: 'Items must fit inside the widget.',
     layout: 'Custom layout', appearance: 'Appearance', rules: 'Rules', widgetOptions: 'Widget options', editTarget: 'Edit', wholeWidget: 'Whole widget', item: 'Item', addItem: 'Add item', removeItem: 'Remove item',
@@ -45,6 +49,10 @@ export const messages: Record<'en' | 'de', Record<string, string>> = {
     defaultApp: 'New application', defaultSource: 'New data source', widget: 'Widget', documentTitle: 'FoxOE', printer: 'Printer',
   },
   de: {
+    formula: 'Formel', formulaPlaceholder: 'value / 1000', formulaHelp: 'value steht für das ausgewählte Feld, field("Pfad") für ein anderes Feld dieser Quelle. Unterstützt + − * / %, Klammern, min, max, abs, round, floor und ceil.',
+    invalidFormula: 'Ungültige Formel.', formulaDataUnavailable: 'Die Formel benötigt numerische Daten.', formulaDivisionByZero: 'Division durch null ist nicht möglich.', formulaNonFinite: 'Das Formelergebnis ist zu groß.', formulaDecimals: 'Runden benötigt 0–10 Nachkommastellen.',
+    availableFields: 'Verfügbare Felder', chooseField: 'Feld auswählen', decimalPlaces: 'Nachkommastellen', fontWeight: 'Schriftstärke', italic: 'Kursiv', verticalAlignment: 'Vertikale Ausrichtung', top: 'Oben', middle: 'Mitte', bottom: 'Unten',
+    weight300: 'Leicht', weight400: 'Normal', weight500: 'Medium', weight600: 'Halbfett', weight700: 'Fett', weight800: 'Extra fett', weight900: 'Sehr fett',
     ruleActions: 'Aktionen', addRuleAction: 'Aktion hinzufügen', removeRuleAction: 'Aktion entfernen', replacementText: 'Ersatztext',
     allowItemOverlap: 'Überlappungen erlauben', itemBounds: 'Elemente müssen in das Widget passen.',
     layout: 'Eigenes Layout', appearance: 'Darstellung', rules: 'Regeln', widgetOptions: 'Widget-Optionen', editTarget: 'Bearbeiten', wholeWidget: 'Gesamtes Widget', item: 'Element', addItem: 'Element hinzufügen', removeItem: 'Element entfernen',

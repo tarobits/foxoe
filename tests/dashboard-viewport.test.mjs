@@ -7,6 +7,8 @@ test('dashboard fitting preserves the complete canvas and scaled drag distances'
   const server = await createServer({server:{middlewareMode:true,watch:null,ws:false},optimizeDeps:{noDiscovery:true,entries:[]},appType:'custom'});
   try {
     const {dashboardFit, dashboardDragDelta} = await server.ssrLoadModule('/frontend/dashboardViewport.ts');
+    assert.equal(dashboardFit(1920,1080,8).width, dashboardFit(968,372,8).width);
+    assert.equal(dashboardFit(1920,1080,8).scale, dashboardFit(968,372,8).scale);
     for (const [width,height,rows] of [[968,360,8],[968,240,48],[358,600,8],[1920,1080,4]]) {
       const result = dashboardFit(width,height,rows);
       assert.ok(result.width * result.scale <= width + .001);

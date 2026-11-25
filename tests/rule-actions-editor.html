@@ -5,7 +5,7 @@ import {createApp,reactive,nextTick} from 'vue';
 import Editor from '/frontend/WidgetEditor.vue';
 import {locale} from '/frontend/i18n.ts';
 import '/frontend/style.css';
-const widget=reactive({id:'sample',kind:'value',title:'Original title',text:'Base',source:'system',path:'count',unit:'%',itemPath:'',padding:12,columns:[1],rows:[1],gap:0,items:[],rules:[{source:'system',path:'ready',operator:'eq',value:true,target:'textColor',color:'#00ff00',visible:true}]});
+const widget=reactive({id:'sample',kind:'value',x:0,y:0,w:16,h:4,title:'Original title',text:'Base',source:'system',path:'count',unit:'%',itemPath:'',padding:12,columns:[1],rows:[1],gap:0,items:[],rules:[{source:'system',path:'ready',operator:'eq',value:true,target:'textColor',color:'#00ff00',visible:true}]});
 const data=reactive({system:{value:{ready:true,count:42},error:null}});
 createApp(Editor,{widget,data,sources:[],now:new Date()}).mount('#app');
 const wait=()=>new Promise(resolve=>setTimeout(resolve,350));

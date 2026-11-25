@@ -1,14 +1,19 @@
 import { computed, onScopeDispose, ref, watch, type Ref } from 'vue';
 
-const DESIGN_WIDTH = 968;
+export const DESIGN_WIDTH = 968; // 1024px kiosk minus dashboard side padding.
+export const DESIGN_HEIGHT = 372; // 600px minus header, dock, and dashboard padding.
 const ROW_STEP = 56; // 48px track + 8px gap; outer padding totals one gap.
 
 export function dashboardFit(width: number, height: number, rows: number) {
   const valid = Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0;
   const rowCount = Number.isInteger(rows) && rows >= 2 && rows <= 48 ? rows : 2;
-  const canvasWidth = valid ? Math.max(DESIGN_WIDTH, width) : DESIGN_WIDTH;
+  const canvasWidth = DESIGN_WIDTH;
   const canvasHeight = rowCount * ROW_STEP;
-  return { width: canvasWidth, height: canvasHeight, scale: valid ? Math.min(1, width / canvasWidth, height / canvasHeight) : 0 };
+  return { width: canvasWidth, height: canvasHeight, scale: valid ? Math.min(1, width / canvasWidth, height / canvasHeight, DESIGN_HEIGHT / canvasHeight) : 0 };
+}
+
+export function widgetDimensions(columns: number, rows: number) {
+  return { width: (DESIGN_WIDTH / 24) * columns - 8, height: ROW_STEP * rows - 8 };
 }
 
 export function dashboardDragDelta(x: number, y: number, scale: number, width: number) {

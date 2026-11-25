@@ -1,0 +1,18 @@
+<!doctype html><html><meta charset="utf-8"><title>Widget layout checks</title><style>body{background:#0b1018;color:white;font:16px system-ui}iframe{display:block;border:0;margin:20px 0}output{position:sticky;top:0;background:#111827;display:block;padding:12px;z-index:10;white-space:pre-wrap}</style><output id="result">Checking desktop-to-kiosk configuration</output>
+<iframe id="preview" title="Widget rendering checks" src="/tests/widget-layout-fit.html" width="1920" height="1080"></iframe>
+<script>
+const frame=document.querySelector('#preview'),output=document.querySelector('#result'),passed=[];
+let stage=0;
+function next(width,height){frame.width=width;frame.height=height;frame.src='/tests/widget-layout-fit.html?stage='+stage;window.scrollTo(0,0);}
+window.addEventListener('message',event=>{
+ if(event.origin!==location.origin||event.source!==frame.contentWindow)return;
+ if(event.data?.result==='fail'){output.textContent=passed.join('\n')+'\nFAIL '+event.data.message;return;}
+ if(event.data?.result==='ready'){
+  if(stage===0){frame.width=1024;frame.height=600;frame.contentWindow.postMessage('verify-resize',location.origin);return;}
+  if(stage===1){passed.push('PASS: 1024×600 editor, preview, sizing, formulas, formatting and fields');stage=2;next(390,844);}
+  else {passed.push('PASS: 390px editor, preview, sizing, formulas, formatting and fields');}
+ }
+ if(event.data?.result==='resized-pass'){passed.push('PASS: desktop edits saved, same layout verified at 1024×600');stage=1;next(1024,600);}
+ output.textContent=passed.join('\n')+(stage===2&&passed.length<3?'\nChecking narrow editor…':'');
+});
+</script></html>

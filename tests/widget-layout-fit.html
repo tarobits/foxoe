@@ -1,0 +1,62 @@
+<!doctype html><html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Widget rendering regression</title><div id="app"></div><output id="result" style="position:fixed;bottom:0;left:0;z-index:999;background:#111827;color:white;font:12px system-ui">Running rendering checks</output>
+<script type="module">
+import {createApp} from 'vue';
+import App from '/frontend/App.vue';
+import '/frontend/style.css';
+const element={title:'',showTitle:false,text:'',source:'system',path:'memoryUsedMiB',itemPath:'',unit:'',icon:null,rules:[],align:'left'};
+let config={gridVersion:2,revision:1,title:'FoxOE',locale:'en',brightness:65,apps:[],sources:[],widgets:[
+ {...element,id:'clock',kind:'clock',x:0,y:0,w:10,h:4,padding:20,gap:8,columns:[1],rows:[1],items:[]},
+ {...element,id:'layout',kind:'layout',title:'Label Station',showTitle:true,x:0,y:4,w:16,h:4,padding:20,gap:8,columns:[1,3],rows:[1,1,1],items:[
+  {...element,id:'icon',kind:'icon',icon:'check-circle',iconColor:'#4ade80',row:0,column:0,rowSpan:1,columnSpan:1},
+  {...element,id:'text',kind:'text',text:'Connected',textColor:'#4ade80',row:0,column:1,rowSpan:1,columnSpan:1},
+  {...element,id:'count',kind:'value',path:'load1',row:1,column:0,rowSpan:1,columnSpan:1},
+  {...element,id:'queue',kind:'text',text:'Queued Labels',row:1,column:1,rowSpan:1,columnSpan:1},
+  {...element,id:'remaining',kind:'value',formula:'value / 1000',decimals:2,unit:'m',fontWeight:700,italic:true,verticalAlign:'bottom',row:2,column:0,rowSpan:1,columnSpan:1},
+  {...element,id:'description',kind:'text',text:'Remaining on current cartridge',row:2,column:1,rowSpan:1,columnSpan:1},
+ ]},
+]};
+const data={system:{value:{load1:0,memoryUsedMiB:3931.23,memoryTotalMiB:8000,memoryPercent:49.14,temperatureC:45},error:null}};
+window.fetch=async(url,options)=>({ok:true,status:200,json:async()=>{
+ if(url==='/api/config'){if(options?.method==='PUT'){config=JSON.parse(options.body);config.revision++;}return structuredClone(config);}
+ return url==='/api/state'?{connected:false,device:'disconnected',configRevision:config.revision,buttons:[]}:structuredClone(data);
+}});
+createApp(App).mount('#app');
+const wait=()=>new Promise(resolve=>setTimeout(resolve,400));
+const assert=(condition,message)=>{if(!condition)throw new Error(message);};
+async function waitFor(check,message){for(let attempt=0;attempt<40;attempt++){if(check())return;await new Promise(resolve=>setTimeout(resolve,100));}throw new Error(message);}
+const click=label=>{const el=[...document.querySelectorAll('button')].find(button=>button.textContent.trim()===label||button.getAttribute('aria-label')===label);assert(el,'Missing '+label);el.click();};
+function metrics(panel){return [...panel.querySelectorAll('.widget-content')].map(el=>({w:el.clientWidth,h:el.clientHeight,font:parseFloat(getComputedStyle(el.querySelector('.widget-value-content')).fontSize)}));}
+function checkFit(){
+ const viewport=document.querySelector('.widget-viewport').getBoundingClientRect();
+ for(const panel of document.querySelectorAll('.widget-grid .widget-panel')){
+  const rect=panel.getBoundingClientRect();assert(rect.bottom<=viewport.bottom+1&&rect.right<=viewport.right+1,'Dashboard exceeds target');
+  for(const el of panel.querySelectorAll('.widget-content:not(.widget-icon)')){const inner=el.querySelector('.widget-value-content');assert(inner.scrollHeight<=el.clientHeight+1&&inner.scrollWidth<=el.clientWidth+1,'Text overflows');}
+ }
+ assert(document.documentElement.scrollHeight<=innerHeight+1,'Page scrolls');
+}
+try{
+ await wait();checkFit();
+ const before=metrics(document.querySelectorAll('.widget-grid .widget-panel')[1]);
+ assert(document.body.textContent.includes('3.93'),'Formula value missing');
+ click('Edit dashboard');await wait();checkFit();
+ const editingMetrics=metrics(document.querySelectorAll('.widget-grid .widget-panel')[1]);
+ assert(JSON.stringify(before)===JSON.stringify(editingMetrics),'Editing changes widget content geometry: '+JSON.stringify({before,after:editingMetrics}));
+ document.querySelectorAll('[aria-label="Edit widget"]')[1].click();await wait();
+ const preview=document.querySelector('.widget-preview-panel');assert(preview,'Preview missing');
+ const previewMetrics=metrics(preview);
+ assert(JSON.stringify(before)===JSON.stringify(previewMetrics),'Preview differs from dashboard: '+JSON.stringify({before,after:previewMetrics}));
+ const target=document.querySelector('.widget-editor > .form-row select');target.value='remaining';target.dispatchEvent(new Event('change',{bubbles:true}));await wait();
+ assert(document.querySelector('.field-picker option[value="memoryUsedMiB"]')?.textContent.includes('memoryUsedMiB'),'System path picker missing');
+ const formula=document.querySelector('[placeholder="value / 1000"]');formula.value='field("memoryTotalMiB") - value';formula.dispatchEvent(new Event('input',{bubbles:true}));await wait();
+ assert(preview.textContent.includes('4,068.77'),'Multiple-field formula failed');
+ formula.value='value / 0';formula.dispatchEvent(new Event('input',{bubbles:true}));await wait();assert(preview.textContent.includes('Cannot divide by zero'),'Formula error missing');
+ formula.value='value / 1000';formula.dispatchEvent(new Event('input',{bubbles:true}));await wait();
+ click('Appearance');await waitFor(()=>document.body.textContent.includes('Vertical alignment'),'Vertical alignment missing');
+ const valueContent=preview.querySelectorAll('.widget-value-content')[4];assert(getComputedStyle(valueContent).fontWeight==='700'&&getComputedStyle(valueContent).fontStyle==='italic','Formatting missing');
+ click('Rules');await waitFor(()=>[...document.querySelectorAll('button')].some(button=>button.textContent.trim()==='Add rule'),'Rules tab did not open');click('Add rule');await waitFor(()=>document.querySelector('.condition-editor .field-picker option[value="temperatureC"]'),'Condition field picker missing');
+ click('Content');await waitFor(()=>document.querySelector('.field-picker'),'Content tab did not open');click('Done');await waitFor(()=>!document.querySelector('dialog').open,'Dialog did not close');click('Save');await wait();checkFit();
+ window.addEventListener('message',async event=>{if(event.data==='verify-resize'){await wait();try{checkFit();document.querySelector('#result').textContent=`PASS resized ${innerWidth}×${innerHeight}: same saved desktop layout fits`;parent.postMessage({result:'resized-pass'},location.origin);}catch(error){document.querySelector('#result').textContent='FAIL '+error.message;}}});
+ document.querySelector('#result').textContent=`PASS ${innerWidth}×${innerHeight}: preview, autosize, formulas, formatting, system fields, save`;
+ parent.postMessage({result:'ready'},location.origin);
+}catch(error){document.querySelector('#result').textContent='FAIL '+error.message;parent.postMessage({result:'fail',message:error.message},location.origin);}
+</script></html>

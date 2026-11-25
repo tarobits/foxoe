@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { Condition, ComparisonFields, Source } from './types';
+import type { Condition, ComparisonFields, Source, DataEntry } from './types';
 import { t } from './i18n';
 import Icon from './Icon.vue';
-const props = withDefaults(defineProps<{ modelValue: Condition; sources: Source[]; depth?: number; remaining: number; removable?: boolean }>(), { depth: 0 });
+import FieldPicker from './FieldPicker.vue';
+const props = withDefaults(defineProps<{ modelValue: Condition; sources: Source[]; data?: Record<string, DataEntry>; depth?: number; remaining: number; removable?: boolean }>(), { depth: 0 });
 const emit = defineEmits<{ 'update:modelValue': [value: Condition]; remove: [] }>();
 const node = computed(() => props.modelValue);
 const operators: ComparisonFields['operator'][] = ['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'contains', 'exists', 'missing', 'truthy', 'falsy'];
@@ -46,12 +47,12 @@ function setType(event: Event) {
     </div>
     <Transition name="notice" mode="out-in">
       <div v-if="node.kind === 'comparison'" key="comparison" class="form-stack">
-        <div class="form-row"><label>{{ t('source') }}<select :value="node.source" @change="update({ source: ($event.target as HTMLSelectElement).value })"><option value="system">{{ t('system') }}</option><option v-for="source in sources" :key="source.id" :value="source.id">{{ source.name }}</option></select></label><label class="grow">{{ t('path') }}<input :value="node.path" maxlength="200" spellcheck="false" @input="update({ path: ($event.target as HTMLInputElement).value })"></label></div>
+        <div class="form-row"><label>{{ t('source') }}<select :value="node.source" @change="update({ source: ($event.target as HTMLSelectElement).value })"><option value="system">{{ t('system') }}</option><option v-for="source in sources" :key="source.id" :value="source.id">{{ source.name }}</option></select></label><FieldPicker :model-value="node.path" :source="node.source" :value="data?.[node.source]?.value" @update:model-value="update({ path: $event })" /></div>
         <div class="form-row"><label>{{ t('comparison') }}<select :value="node.operator" @change="update({ operator: ($event.target as HTMLSelectElement).value })"><option v-for="operator in operators" :key="operator" :value="operator">{{ t(`op_${operator}`) }}</option></select></label><template v-if="!unary.includes(node.operator)"><label>{{ t('valueType') }}<select :value="node.value === null ? 'null' : typeof node.value" @change="setType"><option v-for="type in ['string','number','boolean','null']" :key="type" :value="type">{{ t(`type_${type}`) }}</option></select></label><label v-if="node.value !== null">{{ t('value') }}<input v-if="typeof node.value === 'number'" :value="node.value" type="number" step="any" required @input="update({ value: ($event.target as HTMLInputElement).valueAsNumber })"><select v-else-if="typeof node.value === 'boolean'" :value="String(node.value)" @change="update({ value: ($event.target as HTMLSelectElement).value === 'true' })"><option value="true">{{ t('yes') }}</option><option value="false">{{ t('no') }}</option></select><input v-else :value="node.value" maxlength="1000" @input="update({ value: ($event.target as HTMLInputElement).value })"></label></template></div>
       </div>
       <div v-else key="group" class="form-stack">
         <TransitionGroup name="surface" tag="div" class="condition-children form-stack">
-          <ConditionEditor v-for="(child, index) in node.children" :key="index" :model-value="child" :sources="sources" :depth="depth + 1" :remaining="remaining" :removable="node.children.length > 1" @update:model-value="replace(index, $event)" @remove="replace(index)" />
+          <ConditionEditor v-for="(child, index) in node.children" :key="index" :model-value="child" :sources="sources" :data="data" :depth="depth + 1" :remaining="remaining" :removable="node.children.length > 1" @update:model-value="replace(index, $event)" @remove="replace(index)" />
         </TransitionGroup>
         <div class="condition-toolbar"><button type="button" class="secondary" :disabled="depth >= 4 || remaining < 1 || node.children.length >= 16" @click="add()"><Icon name="plus" />{{ t('addCondition') }}</button><button type="button" class="secondary" :disabled="depth >= 3 || remaining < 2 || node.children.length >= 16" @click="add(true)">{{ t('addConditionGroup') }}</button></div>
       </div>

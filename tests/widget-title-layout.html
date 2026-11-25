@@ -5,7 +5,7 @@ import { createApp, h, reactive } from 'vue';
 import WidgetContent from '/frontend/WidgetContent.vue';
 import WidgetEditor from '/frontend/WidgetEditor.vue';
 import '/frontend/style.css';
-const widget=reactive({id:'sample',kind:'text',title:'',text:'One row of content',source:'system',path:'',itemPath:'',unit:'',icon:null,padding:0,gap:0,columns:[1],rows:[1],items:[],rules:[]});
+const widget=reactive({id:'sample',kind:'text',x:0,y:0,w:8,h:1,title:'',text:'One row of content',source:'system',path:'',itemPath:'',unit:'',icon:null,padding:0,gap:0,columns:[1],rows:[1],items:[],rules:[]});
 const props={widget,data:{},now:new Date()};
 createApp({render:()=>h('main',[
   h('div',{class:'row-check'},h(WidgetContent,props)),
