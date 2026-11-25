@@ -7,6 +7,24 @@ GitHub release tags use the `v` prefix, for example `v1.0.0`.
 
 ## [Unreleased]
 
+## [0.1.0-preview.12] - 2026-11-25
+
+### Added
+
+- Arithmetic formulas for value widgets and items, combining numeric fields from the same JSON source with unit conversions, rounding, and other calculations.
+- Text weight, italic, vertical alignment, and configurable decimal places for widgets and layout items.
+- Field pickers in widget content and conditions, showing system fields with their exact paths and available paths from JSON responses.
+
+### Fixed
+
+- Dashboard layouts use the same 1024×600 design target when configured on larger screens, keeping the widget area within the touchscreen without scrolling.
+- Widget previews and edit mode preserve the dashboard's content dimensions, padding, and text wrapping.
+- Automatic text sizing measures available space and fits the content, including previews initially outside the visible area. Selected text sizes act as upper limits so text can shrink when necessary.
+
+**Downgrade compatibility:** After saving configuration containing widgets with
+this version, restoring an earlier release also requires restoring the pre-update
+database; earlier releases do not recognize the new formatting and formula fields.
+
 ## [0.1.0-preview.11] - 2026-11-24
 
 ### Added
@@ -188,7 +206,8 @@ extension session have not yet been validated on the target setup.
 - English and German interfaces.
 - Raspberry Pi OS/Debian installation and updates from published GitHub releases, with remembered stable/beta channels, data preservation, and recovery after a failed activation.
 
-[Unreleased]: https://github.com/tarobits/foxoe/compare/v0.1.0-preview.11...main
+[Unreleased]: https://github.com/tarobits/foxoe/compare/v0.1.0-preview.12...main
+[0.1.0-preview.12]: https://github.com/tarobits/foxoe/compare/v0.1.0-preview.11...v0.1.0-preview.12
 [0.1.0-preview.11]: https://github.com/tarobits/foxoe/compare/v0.1.0-preview.10...v0.1.0-preview.11
 [0.1.0-preview.10]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre9...v0.1.0-preview.10
 [0.1.0-pre9]: https://github.com/tarobits/foxoe/compare/v0.1.0-pre8...v0.1.0-pre9
